@@ -106,10 +106,8 @@
     }
   };
 
-  trigger.addEventListener('click', (event) => {
-    event.preventDefault();
-    openPanel();
-  });
+  // Hero button now navigates to #products, so don't open panel
+  // Panel can still be opened programmatically via window.openOrderPanel()
 
   backdrop.addEventListener('click', () => {
     closePanel();

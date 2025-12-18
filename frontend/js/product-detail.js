@@ -545,16 +545,16 @@
   // EVENT LISTENERS
   // ============================================
 
-  // Product card clicks
-  const productCards = document.querySelectorAll('.product-card[data-product-id]');
-  productCards.forEach(card => {
-    card.addEventListener('click', (e) => {
-      const productId = card.getAttribute('data-product-id');
-      if (productId) {
-        openProductDetail(productId);
-      }
-    });
-  });
+  // Product card clicks - DISABLED: Now using View Description and Buy Now buttons instead
+  // const productCards = document.querySelectorAll('.product-card[data-product-id]');
+  // productCards.forEach(card => {
+  //   card.addEventListener('click', (e) => {
+  //     const productId = card.getAttribute('data-product-id');
+  //     if (productId) {
+  //       openProductDetail(productId);
+  //     }
+  //   });
+  // });
 
   // Close button
   if (productDetailClose) {
@@ -681,5 +681,6 @@
   // Expose CartManager globally for integration with existing order.js
   window.CartManager = CartManager;
   window.openProductDetail = openProductDetail;
+  window.PRODUCTS = PRODUCTS;
 })();
 

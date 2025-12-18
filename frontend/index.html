@@ -8,15 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./css/styles.css">
-    <script>
-        // Prevent flash of light mode - runs immediately before page render
-        (function() {
-            const darkMode = localStorage.getItem('dark-mode-enabled') === 'true';
-            if (darkMode) {
-                document.documentElement.classList.add('dark-mode');
-            }
-        })();
-    </script>
 </head>
 <body>
     <!-- Site-wide Notification Banner -->
@@ -49,22 +40,6 @@
                     </ul>
                 </nav>
                 <div class="nav-actions">
-                    <button type="button" id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Toggle Dark Mode" title="Toggle Dark Mode">
-                        <svg class="dark-mode-toggle__icon dark-mode-toggle__icon--moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                        </svg>
-                        <svg class="dark-mode-toggle__icon dark-mode-toggle__icon--sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </button>
                     <button type="button" id="nav-cart-btn" class="nav-cart-btn" aria-label="Open cart" aria-controls="order-sidecard">
                         <svg class="nav-cart-btn__icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2ZM7.2 14h9.9c.75 0 1.4-.41 1.74-1.03L21 6H7.42L6.9 4H3v2h2l3.6 7.59-1.35 2.45C6.52 17.37 7.48 19 9 19h12v-2H9l1.1-2Z" />
@@ -90,7 +65,7 @@
                 <h1 class="hero-title">Reliable LPG Cylinder Supply for Homes & Businesses</h1>
                 <p class="hero-subtitle">Safe, fast, and trusted LPG delivery in your area</p>
                 <div class="hero-buttons">
-                    <a href="#contact" class="btn btn-primary">Order LPG Cylinder</a>
+                    <a href="#products" class="btn btn-primary">Order LPG Cylinder</a>
                     <a href="#contact" class="btn btn-secondary">Contact Us</a>
                 </div>
             </div>
@@ -156,6 +131,10 @@
                     </div>
                     <h3>Domestic LPG Cylinders</h3>
                     <p>Perfect for home use - safe, reliable, and efficient</p>
+                    <div class="product-card__actions">
+                        <button type="button" class="btn btn-secondary product-view-desc-btn" data-product-id="domestic">View Description</button>
+                        <button type="button" class="btn btn-primary product-buy-now-btn" data-product-id="domestic">Buy Now</button>
+                    </div>
                 </div>
                 <div class="product-card" data-product-id="commercial" data-product-type="commercial">
                     <div class="product-image">
@@ -163,6 +142,10 @@
                     </div>
                     <h3>Commercial LPG Cylinders</h3>
                     <p>Ideal for businesses and commercial establishments</p>
+                    <div class="product-card__actions">
+                        <button type="button" class="btn btn-secondary product-view-desc-btn" data-product-id="commercial">View Description</button>
+                        <button type="button" class="btn btn-primary product-buy-now-btn" data-product-id="commercial">Buy Now</button>
+                    </div>
                 </div>
                 <div class="product-card" data-product-id="refilling" data-product-type="refilling">
                     <div class="product-image">
@@ -799,11 +782,146 @@
         </div>
     </div>
 
+    <!-- Product Description Modal -->
+    <div id="product-desc-modal" class="product-desc-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="product-desc-title">
+        <div class="product-desc-modal__backdrop" data-product-desc-backdrop></div>
+        <div class="product-desc-modal__dialog">
+            <div class="product-desc-modal__header">
+                <h2 id="product-desc-title" class="product-desc-modal__title"></h2>
+                <button type="button" class="product-desc-modal__close" id="product-desc-close" aria-label="Close description">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="product-desc-modal__body">
+                <div class="product-desc-modal__image">
+                    <img id="product-desc-img" src="" alt="" loading="lazy">
+                </div>
+                <div id="product-desc-description" class="product-desc-modal__description"></div>
+                <div class="product-desc-modal__specs">
+                    <h3 class="product-desc-modal__specs-title">Specifications</h3>
+                    <ul id="product-desc-specs" class="product-desc-modal__specs-list"></ul>
+                </div>
+                <div class="product-desc-modal__price">
+                    <span class="product-desc-modal__price-label">Price:</span>
+                    <span id="product-desc-price" class="product-desc-modal__price-value"></span>
+                </div>
+            </div>
+            <div class="product-desc-modal__footer">
+                <button type="button" class="btn btn-primary product-desc-modal__buy-now" id="product-desc-buy-now">Buy Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Page (shown when hash is #order?product=ID) -->
+    <div id="order-page" class="order-page is-hidden">
+        <div class="container order-page__container">
+            <div class="order-page__header">
+                <h1 class="order-page__title">Place Your Order</h1>
+                <button type="button" class="order-page__close" id="order-page-close" aria-label="Close order page">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="order-page__content">
+                <form id="order-page-form" class="order-page-form" novalidate>
+                    <input type="hidden" id="order-page-product-id" name="productId">
+                    
+                    <div class="order-page__product-info">
+                        <div class="order-page__product-image">
+                            <img id="order-page-product-img" src="" alt="">
+                        </div>
+                        <div class="order-page__product-details">
+                            <h2 id="order-page-product-name" class="order-page__product-name"></h2>
+                            <div class="order-page__product-price">
+                                <span>Price:</span>
+                                <span id="order-page-product-price-value"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-name">Customer Name *</label>
+                        <input type="text" id="order-page-name" name="customerName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-phone">Phone Number *</label>
+                        <input type="tel" id="order-page-phone" name="phone" class="form-input" placeholder="+92XXXXXXXXXX" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-address">Delivery Address *</label>
+                        <textarea id="order-page-address" name="address" class="form-input" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-cylinder-type">Cylinder Type *</label>
+                        <select id="order-page-cylinder-type" name="cylinderType" class="form-input" required>
+                            <option value="">Select type</option>
+                            <option value="domestic">Domestic</option>
+                            <option value="commercial">Commercial</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-quantity">Quantity *</label>
+                        <div class="quantity-stepper">
+                            <button type="button" class="quantity-btn quantity-btn--decrease" aria-label="Decrease quantity">−</button>
+                            <input type="number" id="order-page-quantity" name="quantity" min="1" max="999" value="1" class="form-input quantity-input" required>
+                            <button type="button" class="quantity-btn quantity-btn--increase" aria-label="Increase quantity">+</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-page-coupon">Coupon Code (Optional)</label>
+                        <div class="order-coupon">
+                            <input
+                                id="order-page-coupon"
+                                name="coupon"
+                                class="form-input"
+                                type="text"
+                                autocomplete="off"
+                                placeholder="WELCOME10 / FLAT500"
+                            >
+                            <button type="button" class="order-coupon__btn" id="order-page-coupon-apply">Apply</button>
+                        </div>
+                        <div class="form-error" id="order-page-err-coupon" role="alert" aria-live="polite"></div>
+                        <div class="form-success" id="order-page-success-coupon" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="order-page__total">
+                        <div class="order-page__total-row">
+                            <span>Subtotal:</span>
+                            <span id="order-page-subtotal-value" class="order-page__subtotal-value">₨0</span>
+                        </div>
+                        <div class="order-page__total-row order-page__total-row--discount is-hidden" id="order-page-discount-row">
+                            <span id="order-page-discount-label">Discount:</span>
+                            <span id="order-page-discount-value">₨0</span>
+                        </div>
+                        <div class="order-page__total-row order-page__total-row--final">
+                            <span>Total:</span>
+                            <span id="order-page-total-value" class="order-page__total-value--final">₨0</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary order-page__submit">Add to Cart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/src/order-ui/main.tsx"></script>
     <script src="./js/mobile-menu.js"></script>
-    <script src="./js/dark-mode.js"></script>
+    <script src="./js/analytics.js"></script>
     <script src="./js/order.js"></script>
     <script src="./js/product-detail.js"></script>
+    <script src="./js/product-actions.js"></script>
 </body>
 </html>
 
+a
