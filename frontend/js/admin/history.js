@@ -5,6 +5,7 @@
 
 import { mockOrders } from '../../data/mock-data.js';
 
+// Use mockOrders for history (in production, this would be a separate API call)
 let currentHistory = [...mockOrders];
 let currentFilters = {
   dateFrom: '',

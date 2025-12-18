@@ -178,20 +178,8 @@ export function OrderExperience(): React.ReactElement {
     await submit();
   };
 
-  const triggerLabel = 'Order LPG Cylinder';
-
   return (
     <>
-      <button className={styles.orderTrigger} type="button" onClick={openPanel} aria-label={triggerLabel}>
-        <svg className={styles.orderTriggerIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            fill="currentColor"
-            d="M12 2a1 1 0 0 1 1 1v1.06a4 4 0 0 1 3 3.88V10a3 3 0 0 1 2.4 2.94V20a2 2 0 0 1-2 2H7.6a2 2 0 0 1-2-2v-7.06A3 3 0 0 1 8 10V7.94a4 4 0 0 1 3-3.88V3a1 1 0 0 1 1-1Zm4.4 11H7.6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h8.8a1 1 0 0 0 1-1v-6.06a1 1 0 0 0-1-1ZM12 5a3 3 0 0 0-3 2.94V10h6V7.94A3 3 0 0 0 12 5Z"
-          />
-        </svg>
-        <span>{triggerLabel}</span>
-      </button>
-
       <OrderCylinderPanel open={panelOpen} onClose={closePanel} mode={isMobile ? 'mobile' : 'desktop'} title="Order LPG Cylinder">
         <OrderForm
           draft={draft}
