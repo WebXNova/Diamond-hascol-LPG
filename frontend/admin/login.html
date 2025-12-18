@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Diamond Hascol LPG Agency</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+    <div class="admin-login">
+        <div class="admin-login__card">
+            <div class="admin-login__header">
+                <img src="../public/lpglogo.png" alt="Diamond Hascol LPG Logo" class="admin-login__logo">
+                <h1 class="admin-login__title">Admin Login</h1>
+                <p class="admin-login__subtitle">Diamond Hascol LPG Agency</p>
+            </div>
+
+            <form id="admin-login-form" class="admin-login__form" novalidate>
+                <div class="admin-form-group">
+                    <label for="login-email" class="admin-form-label">Email Address</label>
+                    <input
+                        type="email"
+                        id="login-email"
+                        name="email"
+                        class="admin-form-input"
+                        placeholder="admin@diamondhascol.com"
+                        required
+                        autocomplete="email"
+                    >
+                    <div class="admin-form-error" id="email-error"></div>
+                </div>
+
+                <div class="admin-form-group">
+                    <label for="login-password" class="admin-form-label">Password</label>
+                    <input
+                        type="password"
+                        id="login-password"
+                        name="password"
+                        class="admin-form-input"
+                        placeholder="Enter your password"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <div class="admin-form-error" id="password-error"></div>
+                </div>
+
+                <div class="admin-login__error" id="login-error"></div>
+
+                <button type="submit" class="admin-login__submit" id="login-submit">
+                    <span id="login-submit-text">Sign In</span>
+                    <span id="login-submit-spinner" style="display: none;">Loading...</span>
+                </button>
+            </form>
+
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); text-align: center;">
+                <p style="font-size: var(--fs-0); color: var(--text-500);">
+                    Demo Credentials:<br>
+                    <strong>admin@diamondhascol.com</strong> / <strong>admin123</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { login } from '../js/admin/auth.js';
+        import { navigateTo } from '../js/admin/router.js';
+
+        const form = document.getElementById('admin-login-form');
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const submitBtn = document.getElementById('login-submit');
+        const submitText = document.getElementById('login-submit-text');
+        const submitSpinner = document.getElementById('login-submit-spinner');
+        const emailError = document.getElementById('email-error');
+        const passwordError = document.getElementById('password-error');
+        const loginError = document.getElementById('login-error');
+
+        // Clear errors on input
+        [emailInput, passwordInput].forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                if (input === emailInput) emailError.classList.remove('show');
+                if (input === passwordInput) passwordError.classList.remove('show');
+                loginError.classList.remove('show');
+            });
+        });
+
+        // Form validation
+        function validateForm() {
+            let isValid = true;
+
+            // Email validation
+            if (!emailInput.value.trim()) {
+                emailInput.classList.add('error');
+                emailError.textContent = 'Email is required';
+                emailError.classList.add('show');
+                isValid = false;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value)) {
+                emailInput.classList.add('error');
+                emailError.textContent = 'Please enter a valid email address';
+                emailError.classList.add('show');
+                isValid = false;
+            }
+
+            // Password validation
+            if (!passwordInput.value) {
+                passwordInput.classList.add('error');
+                passwordError.textContent = 'Password is required';
+                passwordError.classList.add('show');
+                isValid = false;
+            } else if (passwordInput.value.length < 6) {
+                passwordInput.classList.add('error');
+                passwordError.textContent = 'Password must be at least 6 characters';
+                passwordError.classList.add('show');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Clear previous errors
+            [emailInput, passwordInput].forEach(input => {
+                input.classList.remove('error');
+            });
+            [emailError, passwordError, loginError].forEach(el => {
+                el.classList.remove('show');
+            });
+
+            // Validate form
+            if (!validateForm()) {
+                return;
+            }
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            submitSpinner.style.display = 'inline';
+
+            try {
+                const result = await login(emailInput.value.trim(), passwordInput.value);
+
+                if (result.success) {
+                    // Redirect to dashboard
+                    navigateTo('dashboard.html');
+                } else {
+                    // Show error
+                    loginError.textContent = result.error || 'Login failed. Please try again.';
+                    loginError.classList.add('show');
+                    submitBtn.disabled = false;
+                    submitText.style.display = 'inline';
+                    submitSpinner.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'An error occurred. Please try again.';
+                loginError.classList.add('show');
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline';
+                submitSpinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+

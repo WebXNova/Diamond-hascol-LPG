@@ -429,6 +429,11 @@
       }
       const finalPrice = Math.max(0, subtotal - discount);
 
+      // Get form data
+      const customerName = formData.get('customerName') || '';
+      const phone = formData.get('phone') || '';
+      const address = formData.get('address') || '';
+
       // Add to cart using CartManager
       if (window.CartManager) {
         try {
@@ -446,18 +451,38 @@
 
           window.CartManager.addItem(cartItem);
 
-          // Fire analytics
-          if (window.analytics && typeof window.analytics.track === 'function') {
-            window.analytics.track('cart_add', { productId, quantity });
+          // Save order to localStorage
+          if (window.OrderStorage) {
+            window.OrderStorage.saveOrder({
+              productId: productId,
+              productName: product.name,
+              cylinderType: cylinderTypeValue,
+              quantity: quantityValue,
+              unitPrice: unitPrice,
+              subtotal: subtotal,
+              discount: discount,
+              finalPrice: finalPrice,
+              couponCode: couponState.status === 'applied' ? couponState.code : null,
+              customerName: customerName,
+              phone: phone,
+              address: address
+            });
           }
 
-          // Redirect to cart (sidecard)
+          // Fire analytics
+          if (window.analytics && typeof window.analytics.track === 'function') {
+            window.analytics.track('cart_add', { productId, quantity: quantityValue });
+          }
+
+          // Redirect to cart page
           closeOrderPage();
-          if (typeof window.openSidecard === 'function') {
+          if (typeof window.openCartPage === 'function') {
+            window.openCartPage();
+          } else if (typeof window.openSidecard === 'function') {
             window.openSidecard();
           } else {
             // Fallback: show success message
-            alert(`Added ${quantity} x ${product.name} to cart!`);
+            alert(`Order saved! ${quantityValue} x ${product.name} added.`);
           }
         } catch (error) {
           console.error('Failed to add to cart:', error);

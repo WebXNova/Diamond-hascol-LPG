@@ -313,6 +313,17 @@
     if (navCartDot) navCartDot.classList.toggle('is-active', !!active);
     const miniCartDot = miniCartBtn ? miniCartBtn.querySelector('.order-mini-cart__dot') : null;
     if (miniCartDot) miniCartDot.classList.toggle('is-active', !!active);
+    
+    // Show/hide mini cart button on mobile based on orders
+    if (miniCartBtn && window.OrderStorage) {
+      const orderCount = window.OrderStorage.getOrderCount();
+      if (orderCount > 0) {
+        miniCartBtn.classList.remove('is-hidden');
+      } else if (!active) {
+        // Only hide if no active indicator and no orders
+        miniCartBtn.classList.add('is-hidden');
+      }
+    }
   };
 
   const getSelectedType = () => {
@@ -916,6 +927,25 @@
       submitState.lastOrder = res;
       submitState.lastSnapshot = snapshot;
 
+      // Save order to localStorage
+      if (window.OrderStorage) {
+        const totals = snapshot;
+        window.OrderStorage.saveOrder({
+          productId: 'manual',
+          productName: `${snapshot.type === 'commercial' ? 'Commercial' : 'Domestic'} LPG Cylinder`,
+          cylinderType: snapshot.type,
+          quantity: snapshot.qty,
+          unitPrice: snapshot.unit,
+          subtotal: snapshot.subtotal,
+          discount: snapshot.discount,
+          finalPrice: snapshot.finalTotal,
+          couponCode: snapshot.couponCode || null,
+          customerName: payload.customerName,
+          phone: payload.phone,
+          address: payload.address
+        });
+      }
+
       // Keep form disabled to prevent double submission.
       setSubmitUI('idle', '');
       submitBtn.disabled = true;
@@ -924,7 +954,13 @@
         renderOrderCard(res, snapshot);
         openSidecard();
         startStatusSimulation();
-        showToast('Order confirmed. Pay on delivery.', 'View Order', () => openSidecard());
+        showToast('Order confirmed. Pay on delivery.', 'View Order', () => {
+          if (typeof window.openCartPage === 'function') {
+            window.openCartPage();
+          } else {
+            openSidecard();
+          }
+        });
         setCartIndicator(true);
       }
     } catch (e) {
@@ -1009,18 +1045,44 @@
   renderQtyWarning();
   renderPrice();
 
+  // Initialize cart indicator based on stored orders
+  if (hasSidecardUI && window.OrderStorage) {
+    const orderCount = window.OrderStorage.getOrderCount();
+    if (orderCount > 0) {
+      setCartIndicator(true);
+      if (miniCartBtn) {
+        miniCartBtn.classList.remove('is-hidden');
+      }
+    }
+  }
+
   // Toast + sidecard events
   if (hasSidecardUI) {
     toastCloseBtn.addEventListener('click', () => hideToast());
 
     sidecardCloseBtn.addEventListener('click', () => closeSidecard());
-    miniCartBtn.addEventListener('click', () => openSidecard());
-    navCartBtn.addEventListener('click', () => openSidecard());
+    miniCartBtn.addEventListener('click', () => {
+      // Navigate to cart page instead of opening sidecard
+      if (typeof window.openCartPage === 'function') {
+        window.openCartPage();
+      } else {
+        openSidecard();
+      }
+    });
+    navCartBtn.addEventListener('click', () => {
+      // Navigate to cart page instead of opening sidecard
+      if (typeof window.openCartPage === 'function') {
+        window.openCartPage();
+      } else {
+        openSidecard();
+      }
+    });
     sidecardBackdropEl.addEventListener('click', () => closeSidecard());
 
     // Expose openSidecard and updateSidecardFromCart globally for product-detail.js integration
     window.openSidecard = openSidecard;
     window.updateSidecardFromCart = updateSidecardFromCart;
+    window.setCartIndicator = setCartIndicator;
 
     sidecardToggleBtn.addEventListener('click', () => {
       const collapsed = sidecardEl.classList.toggle('is-collapsed');
