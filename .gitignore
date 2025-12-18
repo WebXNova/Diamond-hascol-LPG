@@ -1,0 +1,39 @@
+# Cursor / AI tools
+.cursor/
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+out/
+.next/
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Database (runtime data only)
+database/data/
+database/dumps/
+database/*.sqlite
+database/*.db
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Optional local scripts
+push-to-github.ps1
+push.bat
