@@ -969,6 +969,18 @@
     min-width: 100px;
   }
 
+  /* Better table cell wrapping on mobile */
+  .admin-table td {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Compact badges on mobile */
+  .admin-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+  }
+
   /* Forms */
   .admin-form-row {
     grid-template-columns: 1fr;
@@ -1131,6 +1143,16 @@
     min-width: 0;
     min-height: 48px;
   }
+
+  /* Better spacing for mobile forms */
+  .admin-form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  /* Improved modal on mobile */
+  .admin-modal__body {
+    padding: 1.5rem;
+  }
 }
 
 /* Tablet Styles */
@@ -1150,6 +1172,71 @@
 
   .admin-content {
     padding: 1.75rem;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .admin-table {
+    min-width: 700px;
+  }
+
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mini Laptop / Small Desktop (1024px - 1366px) */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  .admin-sidebar {
+    width: 260px;
+  }
+
+  .admin-main {
+    margin-left: 260px;
+  }
+
+  .admin-content {
+    padding: 1.75rem 2rem;
+  }
+
+  .admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.75rem;
+  }
+
+  .admin-stat-card {
+    padding: 1.5rem;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .admin-table {
+    font-size: var(--fs-0);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 1rem 1.5rem;
+  }
+
+  .admin-form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-modal {
+    max-width: 600px;
+  }
+
+  .admin-header {
+    padding: 1.25rem 1.75rem;
+  }
+
+  .admin-header__title {
+    font-size: var(--fs-3);
   }
 }
 
@@ -1254,6 +1341,60 @@
   .admin-stat-card__icon svg {
     width: 20px;
     height: 20px;
+  }
+
+  /* Better form inputs on very small screens */
+  .admin-form-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Compact modals on very small screens */
+  .admin-modal__header,
+  .admin-modal__body,
+  .admin-modal__footer {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+/* Large Desktop (1367px and above) */
+@media (min-width: 1367px) {
+  .admin-content {
+    padding: 2.5rem;
+  }
+
+  .admin-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 1.25rem 2rem;
+  }
+
+  .admin-form-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .admin-sidebar {
+    width: 280px;
+  }
+
+  .admin-main {
+    margin-left: 280px;
+  }
+}
+
+/* Extra improvements for better touch targets on tablets */
+@media (min-width: 769px) and (max-width: 1024px) and (hover: none) {
+  .admin-btn,
+  .admin-nav__item {
+    min-height: 48px;
+  }
+
+  .admin-table tbody tr {
+    min-height: 56px;
   }
 }
 
