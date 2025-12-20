@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar Backdrop (Mobile) -->
+        <div class="admin-sidebar-backdrop"></div>
+        
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar__header">
+                <img src="../public/lpglogo.png" alt="Logo" class="admin-sidebar__logo">
+                <div class="admin-sidebar__title">Admin Panel</div>
+            </div>
+            <nav class="admin-sidebar__nav">
+                <a href="dashboard.html" class="admin-nav__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="orders.html" class="admin-nav__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    </svg>
+                    Orders
+                </a>
+                <a href="messages.html" class="admin-nav__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Messages
+                </a>
+                <a href="coupons.html" class="admin-nav__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="8" width="18" height="4" rx="1"></rect>
+                        <path d="M12 8v13"></path>
+                        <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path>
+                        <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"></path>
+                    </svg>
+                    Coupons
+                </a>
+                <a href="history.html" class="admin-nav__item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    History
+                </a>
+                <a href="settings.html" class="admin-nav__item active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+                    </svg>
+                    Settings
+                </a>
+            </nav>
+            <div class="admin-sidebar__footer">
+                <button id="admin-logout-btn" class="admin-btn admin-btn--secondary" style="width: 100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+            <!-- Header -->
+            <header class="admin-header">
+                <h1 class="admin-header__title">Settings</h1>
+                <div class="admin-header__actions">
+                    <div class="admin-user">
+                        <div class="admin-user__info">
+                            <div class="admin-user__name" id="admin-user-name">Admin</div>
+                            <div class="admin-user__email" id="admin-user-email">admin@diamondhascol.com</div>
+                        </div>
+                        <div class="admin-user__avatar" id="admin-user-avatar">A</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="admin-content">
+                <!-- Settings Tabs -->
+                <div class="admin-settings-tabs">
+                    <button class="admin-settings-tab active" data-tab="profile">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Profile
+                    </button>
+                    <button class="admin-settings-tab" data-tab="system">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                        </svg>
+                        System
+                    </button>
+                    <button class="admin-settings-tab" data-tab="business">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        Business
+                    </button>
+                    <button class="admin-settings-tab" data-tab="pricing">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Pricing
+                    </button>
+                    <button class="admin-settings-tab" data-tab="delivery">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M1 3h15v13H1z"></path>
+                            <path d="M16 8h4l3 3v5h-7V8z"></path>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                        </svg>
+                        Delivery
+                    </button>
+                    <button class="admin-settings-tab" data-tab="service">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Service
+                    </button>
+                    <button class="admin-settings-tab" data-tab="inventory">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        Inventory
+                    </button>
+                    <button class="admin-settings-tab" data-tab="payment">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                            <line x1="1" y1="10" x2="23" y2="10"></line>
+                        </svg>
+                        Payment
+                    </button>
+                    <button class="admin-settings-tab" data-tab="orders">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                        Orders
+                    </button>
+                    <button class="admin-settings-tab" data-tab="communication">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Communication
+                    </button>
+                </div>
+
+                <!-- Profile Settings Panel -->
+                <div id="settings-profile" class="admin-settings-panel active">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Profile Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Update your personal information and password
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="profile-settings-form" class="admin-form" onsubmit="saveProfileSettings(event)">
+                                <div class="admin-form-row">
+                                    <div class="admin-form-group">
+                                        <label for="profile-name" class="admin-form-label">Full Name *</label>
+                                        <input
+                                            type="text"
+                                            id="profile-name"
+                                            class="admin-form-input"
+                                            required
+                                            placeholder="Admin User"
+                                        >
+                                    </div>
+                                    <div class="admin-form-group">
+                                        <label for="profile-email" class="admin-form-label">Email Address *</label>
+                                        <input
+                                            type="email"
+                                            id="profile-email"
+                                            class="admin-form-input"
+                                            required
+                                            placeholder="admin@diamondhascol.com"
+                                        >
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Change Password
+                                    </h3>
+                                    <p style="color: var(--text-500); font-size: var(--fs-0); margin-bottom: 1.5rem;">
+                                        Leave blank if you don't want to change your password
+                                    </p>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="profile-current-password" class="admin-form-label">Current Password</label>
+                                            <input
+                                                type="password"
+                                                id="profile-current-password"
+                                                class="admin-form-input"
+                                                placeholder="Enter current password"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="profile-new-password" class="admin-form-label">New Password</label>
+                                            <input
+                                                type="password"
+                                                id="profile-new-password"
+                                                class="admin-form-input"
+                                                placeholder="Enter new password (min 6 characters)"
+                                                minlength="6"
+                                            >
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="profile-confirm-password" class="admin-form-label">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                id="profile-confirm-password"
+                                                class="admin-form-input"
+                                                placeholder="Confirm new password"
+                                                minlength="6"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Profile
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Settings Panel -->
+                <div id="settings-system" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                System Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure system preferences and notifications
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="system-settings-form" class="admin-form" onsubmit="saveSystemSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Notifications
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="email-notifications"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Email Notifications</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Receive email alerts for important events</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 0.75rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="order-notifications"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Order Notifications</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Get notified when new orders are placed</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 0.75rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="message-notifications"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Message Notifications</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Get notified when customers send messages</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Preferences
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="dashboard-refresh" class="admin-form-label">Dashboard Auto-Refresh (seconds)</label>
+                                            <input
+                                                type="number"
+                                                id="dashboard-refresh"
+                                                class="admin-form-input"
+                                                min="10"
+                                                max="300"
+                                                step="10"
+                                                value="30"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                How often to refresh dashboard data (10-300 seconds)
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="items-per-page" class="admin-form-label">Items Per Page</label>
+                                            <select id="items-per-page" class="admin-form-input">
+                                                <option value="10">10</option>
+                                                <option value="20" selected>20</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-row" style="margin-top: 1.5rem;">
+                                        <div class="admin-form-group">
+                                            <label for="theme" class="admin-form-label">Theme</label>
+                                            <select id="theme" class="admin-form-input">
+                                                <option value="light" selected>Light</option>
+                                                <option value="dark">Dark</option>
+                                                <option value="auto">Auto (System)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save System Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Settings Panel -->
+                <div id="settings-business" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Business Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Manage company information, contact details, and pricing
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="business-settings-form" class="admin-form" onsubmit="saveBusinessSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Company Information
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="company-name" class="admin-form-label">Company Name *</label>
+                                            <input
+                                                type="text"
+                                                id="company-name"
+                                                class="admin-form-input"
+                                                required
+                                                placeholder="Diamond Hascol LPG Agency"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="company-phone" class="admin-form-label">Phone Number *</label>
+                                            <input
+                                                type="tel"
+                                                id="company-phone"
+                                                class="admin-form-input"
+                                                required
+                                                placeholder="+92 300 341 1169"
+                                            >
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="company-email" class="admin-form-label">Email Address *</label>
+                                            <input
+                                                type="email"
+                                                id="company-email"
+                                                class="admin-form-input"
+                                                required
+                                                placeholder="info@diamondhascol.com"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label for="company-address" class="admin-form-label">Address *</label>
+                                        <textarea
+                                            id="company-address"
+                                            class="admin-form-input"
+                                            rows="2"
+                                            required
+                                                placeholder="Larkana, Sindh, Pakistan"
+                                        ></textarea>
+                                    </div>
+                                    <div class="admin-form-row" style="margin-top: 1.5rem;">
+                                        <div class="admin-form-group">
+                                            <label for="company-city" class="admin-form-label">City *</label>
+                                            <input
+                                                type="text"
+                                                id="company-city"
+                                                class="admin-form-input"
+                                                required
+                                                placeholder="Larkana"
+                                            >
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="company-country" class="admin-form-label">Country *</label>
+                                            <input
+                                                type="text"
+                                                id="company-country"
+                                                class="admin-form-input"
+                                                required
+                                                placeholder="Pakistan"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Contact Information
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="whatsapp-number" class="admin-form-label">WhatsApp Number</label>
+                                        <input
+                                            type="tel"
+                                            id="whatsapp-number"
+                                            class="admin-form-input"
+                                            placeholder="923003411169"
+                                        >
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            WhatsApp number for customer support (with country code)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Website Settings
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="notification-banner" class="admin-form-label">Notification Banner Text</label>
+                                        <input
+                                            type="text"
+                                            id="notification-banner"
+                                            class="admin-form-input"
+                                            placeholder="Order LPG Cylinder in Seconds in Larkana"
+                                        >
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            This text appears in the top notification banner on the website
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Business Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing Settings Panel -->
+                <div id="settings-pricing" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Pricing Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Manage cylinder prices, delivery charges, and bulk discounts
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="pricing-settings-form" class="admin-form" onsubmit="savePricingSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Cylinder Prices
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="domestic-price" class="admin-form-label">Domestic Cylinder Price (₨) *</label>
+                                            <input
+                                                type="number"
+                                                id="domestic-price"
+                                                class="admin-form-input"
+                                                required
+                                                min="0"
+                                                step="100"
+                                                placeholder="3200"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Price per domestic LPG cylinder
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="commercial-price" class="admin-form-label">Commercial Cylinder Price (₨) *</label>
+                                            <input
+                                                type="number"
+                                                id="commercial-price"
+                                                class="admin-form-input"
+                                                required
+                                                min="0"
+                                                step="100"
+                                                placeholder="12800"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Price per commercial LPG cylinder
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Delivery Charges
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="delivery-charge" class="admin-form-label">Standard Delivery Charge (₨)</label>
+                                            <input
+                                                type="number"
+                                                id="delivery-charge"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="50"
+                                                placeholder="0"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Additional charge for standard delivery (0 for free delivery)
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="free-delivery-threshold" class="admin-form-label">Free Delivery Threshold (₨)</label>
+                                            <input
+                                                type="number"
+                                                id="free-delivery-threshold"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="100"
+                                                placeholder="5000"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Orders above this amount get free delivery
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Bulk Discount
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="bulk-discount-enabled"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Enable Bulk Discount</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Apply discount for bulk orders</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-row" style="margin-top: 1.5rem;">
+                                        <div class="admin-form-group">
+                                            <label for="bulk-discount-threshold" class="admin-form-label">Minimum Quantity for Discount</label>
+                                            <input
+                                                type="number"
+                                                id="bulk-discount-threshold"
+                                                class="admin-form-input"
+                                                min="1"
+                                                step="1"
+                                                placeholder="5"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Minimum number of cylinders required
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="bulk-discount-percent" class="admin-form-label">Discount Percentage (%)</label>
+                                            <input
+                                                type="number"
+                                                id="bulk-discount-percent"
+                                                class="admin-form-input"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                placeholder="5"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Percentage discount applied to bulk orders
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Pricing Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delivery Settings Panel -->
+                <div id="settings-delivery" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Delivery Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure delivery timeframes, service areas, and delivery hours
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="delivery-settings-form" class="admin-form" onsubmit="saveDeliverySettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Delivery Timeframes
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="default-delivery-time" class="admin-form-label">Default Delivery Time (hours) *</label>
+                                            <input
+                                                type="number"
+                                                id="default-delivery-time"
+                                                class="admin-form-input"
+                                                required
+                                                min="1"
+                                                step="1"
+                                                placeholder="24"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Standard delivery time in hours
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="express-delivery-available"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Enable Express Delivery</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Offer faster delivery option to customers</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-row" style="margin-top: 1.5rem;">
+                                        <div class="admin-form-group">
+                                            <label for="express-delivery-time" class="admin-form-label">Express Delivery Time (hours)</label>
+                                            <input
+                                                type="number"
+                                                id="express-delivery-time"
+                                                class="admin-form-input"
+                                                min="1"
+                                                step="1"
+                                                placeholder="6"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Express delivery time in hours
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="express-delivery-charge" class="admin-form-label">Express Delivery Charge (₨)</label>
+                                            <input
+                                                type="number"
+                                                id="express-delivery-charge"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="50"
+                                                placeholder="500"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Additional charge for express delivery
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Service Areas
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="service-areas" class="admin-form-label">Delivery Areas</label>
+                                        <input
+                                            type="text"
+                                            id="service-areas"
+                                            class="admin-form-input"
+                                            placeholder="Larkana, Nearby Areas"
+                                        >
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Comma-separated list of areas where you deliver
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Delivery Hours
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="delivery-hours-start" class="admin-form-label">Start Time</label>
+                                            <input
+                                                type="time"
+                                                id="delivery-hours-start"
+                                                class="admin-form-input"
+                                                value="09:00"
+                                            >
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="delivery-hours-end" class="admin-form-label">End Time</label>
+                                            <input
+                                                type="time"
+                                                id="delivery-hours-end"
+                                                class="admin-form-input"
+                                                value="18:00"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label class="admin-form-label">Delivery Days</label>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-monday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Monday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-tuesday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Tuesday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-wednesday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Wednesday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-thursday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Thursday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-friday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Friday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-saturday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Saturday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="delivery-day-sunday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Sunday</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Delivery Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Service Settings Panel -->
+                <div id="settings-service" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Service Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure service offerings, commitments, and operating hours
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="service-settings-form" class="admin-form" onsubmit="saveServiceSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Service Offerings
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="refilling-service-available"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Cylinder Refilling Service</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Offer cylinder refilling service to customers</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-row" style="margin-top: 1.5rem;">
+                                        <div class="admin-form-group">
+                                            <label for="refilling-price" class="admin-form-label">Refilling Service Price (₨)</label>
+                                            <input
+                                                type="number"
+                                                id="refilling-price"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="100"
+                                                placeholder="2500"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Price for cylinder refilling service
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="maintenance-service-available"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Maintenance Service</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Offer cylinder maintenance and safety checks</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="emergency-service-available"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Emergency Service</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Offer emergency delivery service</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label for="emergency-service-charge" class="admin-form-label">Emergency Service Charge (₨)</label>
+                                        <input
+                                            type="number"
+                                            id="emergency-service-charge"
+                                            class="admin-form-input"
+                                            min="0"
+                                            step="100"
+                                            placeholder="1000"
+                                        >
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Additional charge for emergency service
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Service Commitment
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="service-commitment" class="admin-form-label">Service Commitment Message</label>
+                                        <textarea
+                                            id="service-commitment"
+                                            class="admin-form-input"
+                                            rows="3"
+                                            placeholder="We guarantee safe and timely delivery within 24 hours"
+                                        ></textarea>
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            This message will be displayed to customers as your service commitment
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Operating Hours
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="operating-hours-start" class="admin-form-label">Start Time</label>
+                                            <input
+                                                type="time"
+                                                id="operating-hours-start"
+                                                class="admin-form-input"
+                                                value="08:00"
+                                            >
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="operating-hours-end" class="admin-form-label">End Time</label>
+                                            <input
+                                                type="time"
+                                                id="operating-hours-end"
+                                                class="admin-form-input"
+                                                value="20:00"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label class="admin-form-label">Operating Days</label>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-monday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Monday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-tuesday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Tuesday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-wednesday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Wednesday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-thursday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Thursday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-friday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Friday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-saturday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Saturday</span>
+                                            </label>
+                                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                                <input type="checkbox" id="operating-day-sunday" style="width: 18px; height: 18px; cursor: pointer;">
+                                                <span>Sunday</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Service Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Settings Panel -->
+                <div id="settings-inventory" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Inventory Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Manage stock levels and inventory thresholds
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="inventory-settings-form" class="admin-form" onsubmit="saveInventorySettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Current Stock
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="domestic-stock" class="admin-form-label">Domestic Cylinders in Stock</label>
+                                            <input
+                                                type="number"
+                                                id="domestic-stock"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="1"
+                                                placeholder="50"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Current number of domestic cylinders available
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="commercial-stock" class="admin-form-label">Commercial Cylinders in Stock</label>
+                                            <input
+                                                type="number"
+                                                id="commercial-stock"
+                                                class="admin-form-input"
+                                                min="0"
+                                                step="1"
+                                                placeholder="20"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Current number of commercial cylinders available
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Stock Alerts
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="low-stock-threshold" class="admin-form-label">Low Stock Threshold</label>
+                                        <input
+                                            type="number"
+                                            id="low-stock-threshold"
+                                            class="admin-form-input"
+                                            min="0"
+                                            step="1"
+                                            placeholder="10"
+                                        >
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Alert when stock falls below this number
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="auto-update-stock"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Auto-Update Stock</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Automatically reduce stock when orders are confirmed</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Inventory Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Settings Panel -->
+                <div id="settings-payment" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Payment Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure accepted payment methods and terms
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="payment-settings-form" class="admin-form" onsubmit="savePaymentSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Payment Methods
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="cash-on-delivery"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Cash on Delivery (COD)</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Accept cash payments at delivery</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="bank-transfer"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Bank Transfer</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Accept bank transfer payments</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="mobile-payment"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Mobile Payment (JazzCash, EasyPaisa)</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Accept mobile wallet payments</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Payment Terms
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="payment-terms" class="admin-form-label">Payment Terms & Conditions</label>
+                                        <textarea
+                                            id="payment-terms"
+                                            class="admin-form-input"
+                                            rows="3"
+                                            placeholder="Payment on delivery only"
+                                        ></textarea>
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Terms and conditions displayed to customers
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Payment Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Settings Panel -->
+                <div id="settings-orders" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Order Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure order processing rules and limits
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="order-settings-form" class="admin-form" onsubmit="saveOrderSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Order Processing
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="auto-confirm-orders"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Auto-Confirm Orders</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Automatically confirm new orders without manual approval</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="require-phone-verification"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Require Phone Verification</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Verify customer phone numbers before order confirmation</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Order Limits
+                                    </h3>
+                                    <div class="admin-form-row">
+                                        <div class="admin-form-group">
+                                            <label for="min-order-quantity" class="admin-form-label">Minimum Order Quantity</label>
+                                            <input
+                                                type="number"
+                                                id="min-order-quantity"
+                                                class="admin-form-input"
+                                                min="1"
+                                                step="1"
+                                                placeholder="1"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Minimum number of cylinders per order
+                                            </div>
+                                        </div>
+                                        <div class="admin-form-group">
+                                            <label for="max-order-quantity" class="admin-form-label">Maximum Order Quantity</label>
+                                            <input
+                                                type="number"
+                                                id="max-order-quantity"
+                                                class="admin-form-input"
+                                                min="1"
+                                                step="1"
+                                                placeholder="10"
+                                            >
+                                            <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                                Maximum number of cylinders per order
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.75rem; background: var(--bg-1); border-radius: var(--radius-md);">
+                                            <input
+                                                type="checkbox"
+                                                id="allow-bulk-orders"
+                                                style="width: 18px; height: 18px; cursor: pointer;"
+                                            >
+                                            <div>
+                                                <div style="font-weight: 600; color: var(--text-900);">Allow Bulk Orders</div>
+                                                <div style="font-size: var(--fs-0); color: var(--text-500);">Allow customers to place orders for multiple cylinders</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Order Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Communication Settings Panel -->
+                <div id="settings-communication" class="admin-settings-panel">
+                    <div class="admin-table-wrapper">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h2 style="font-family: var(--font-heading); font-size: var(--fs-3); font-weight: 700; color: var(--text-900);">
+                                Communication Settings
+                            </h2>
+                            <p style="color: var(--text-500); font-size: var(--fs-1); margin-top: 0.5rem;">
+                                Configure automated messages and communication templates
+                            </p>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <form id="communication-settings-form" class="admin-form" onsubmit="saveCommunicationSettings(event)">
+                                <div style="margin-bottom: 2rem;">
+                                    <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1.5rem;">
+                                        Message Templates
+                                    </h3>
+                                    <div class="admin-form-group">
+                                        <label for="order-confirmation-template" class="admin-form-label">Order Confirmation Template</label>
+                                        <textarea
+                                            id="order-confirmation-template"
+                                            class="admin-form-input"
+                                            rows="3"
+                                            placeholder="Your order {ORDER_ID} has been confirmed. We will deliver within {DELIVERY_TIME} hours."
+                                        ></textarea>
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Use {ORDER_ID} for order number, {DELIVERY_TIME} for delivery timeframe
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-group" style="margin-top: 1.5rem;">
+                                        <label for="delivery-update-template" class="admin-form-label">Delivery Update Template</label>
+                                        <textarea
+                                            id="delivery-update-template"
+                                            class="admin-form-input"
+                                            rows="3"
+                                            placeholder="Your order {ORDER_ID} is out for delivery. Expected delivery: {ETA}"
+                                        ></textarea>
+                                        <div style="font-size: var(--fs-0); color: var(--text-500); margin-top: 0.25rem;">
+                                            Use {ORDER_ID} for order number, {ETA} for estimated arrival time
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                                    <button type="submit" class="admin-btn admin-btn--primary">
+                                        Save Communication Settings
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Toggle Button -->
+    <button id="admin-mobile-menu-btn" class="admin-mobile-menu-btn" aria-label="Toggle menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 24px; height: 24px;">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <script type="module">
+        import '../js/admin/router.js';
+        import '../js/admin/layout.js';
+        import '../js/admin/settings.js';
+    </script>
+
+    <style>
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        .admin-settings-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+
+        .admin-settings-tabs::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .admin-settings-tabs::-webkit-scrollbar-track {
+            background: var(--bg-1);
+        }
+
+        .admin-settings-tabs::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .admin-settings-tabs::-webkit-scrollbar-thumb:hover {
+            background: var(--text-400);
+        }
+
+        .admin-settings-tab {
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-500);
+            font-weight: 600;
+            font-size: var(--fs-1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s var(--ease-out);
+            white-space: nowrap;
+        }
+
+        .admin-settings-tab:hover {
+            color: var(--color-brand);
+            background: rgba(11, 74, 166, 0.05);
+        }
+
+        .admin-settings-tab.active {
+            color: var(--color-brand);
+            border-bottom-color: var(--color-brand);
+        }
+
+        .admin-settings-panel {
+            display: none;
+        }
+
+        .admin-settings-panel.active {
+            display: block;
+            animation: fadeIn 0.3s var(--ease-out);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-settings-tabs {
+                gap: 0.25rem;
+            }
+
+            .admin-settings-tab {
+                padding: 0.75rem 1rem;
+                font-size: var(--fs-0);
+            }
+
+            .admin-settings-tab svg {
+                width: 16px;
+                height: 16px;
+            }
+        }
+    </style>
+</body>
+</html>
+
