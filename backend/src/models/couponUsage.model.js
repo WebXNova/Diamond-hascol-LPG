@@ -1,31 +1,28 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
 
-const Message = sequelize.define(
-  "Message",
+const CouponUsage = sequelize.define(
+  "CouponUsage",
   {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    name: {
-      type: DataTypes.STRING(100),
+    couponCode: {
+      type: DataTypes.STRING(50),
       allowNull: false,
+      field: "coupon_code",
     },
-    phone: {
-      type: DataTypes.BIGINT,
+    orderId: {
+      type: DataTypes.INTEGER,
       allowNull: false,
+      field: "order_id",
     },
-    message: {
-      type: DataTypes.TEXT,
+    discountAmount: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-    },
-    isRead: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: "is_read",
+      field: "discount_amount",
     },
   },
   {
@@ -33,8 +30,9 @@ const Message = sequelize.define(
     underscored: true,
     createdAt: "created_at",
     updatedAt: false, // No updated_at for this table
-    tableName: "messages",
+    tableName: "coupon_usage",
   }
 );
 
-module.exports = Message;
+module.exports = CouponUsage;
+

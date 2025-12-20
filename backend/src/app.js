@@ -1,103 +1,43 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
-const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
+const orderRoutes = require("./routes/public/order.routes");
+const couponRoutes = require("./routes/public/coupon.routes");
+const productRoutes = require("./routes/public/product.routes");
+const messageRoutes = require("./routes/public/message.routes");
+const adminOrderRoutes = require("./routes/admin/order.routes");
+const adminCouponRoutes = require("./routes/admin/coupon.routes");
+const adminMessageRoutes = require("./routes/admin/message.routes");
+const errorMiddleware = require("./middlewares/error.middleware");
 
 const app = express();
 
-// Middlewares
+// Enable JSON body parsing with size limit
+app.use(express.json({ limit: '10kb' }));
+
+// Enable CORS
 app.use(cors());
+
+// Basic security middleware
 app.use(helmet());
-app.use(morgan("dev"));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
 
-// Test Route
-app.get("/", (req, res) => {
-  res.send("Diamond Hascol LPG Backend Running 🚀");
+// Public routes
+app.use("/api/orders", orderRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/contact", messageRoutes);
+
+// Admin routes (no auth middleware - open for now)
+app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/coupons", adminCouponRoutes);
+app.use("/api/admin/messages", adminMessageRoutes);
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// ============================================
-// PUBLIC ROUTES
-// ============================================
-
-// Orders Routes
-app.post("/api/orders", (req, res) => {
-  res.json({ success: true, message: "Order endpoint - to be implemented" });
-});
-
-// Coupons Routes
-app.post("/api/coupons/validate", (req, res) => {
-  res.json({ success: true, message: "Validate coupon endpoint - to be implemented" });
-});
-
-// Messages Routes
-app.post("/api/messages", (req, res) => {
-  res.json({ success: true, message: "Message endpoint - to be implemented" });
-});
-
-// ============================================
-// ADMIN ROUTES
-// ============================================
-
-// Auth Routes
-app.post("/api/admin/auth/login", (req, res) => {
-  res.json({ success: true, message: "Admin login endpoint - to be implemented" });
-});
-
-// Dashboard Routes
-app.get("/api/admin/dashboard", (req, res) => {
-  res.json({ success: true, message: "Dashboard endpoint - to be implemented" });
-});
-
-// Admin Orders Routes
-app.get("/api/admin/orders", (req, res) => {
-  res.json({ success: true, message: "Get orders endpoint - to be implemented" });
-});
-
-app.patch("/api/admin/orders/:id/status", (req, res) => {
-  res.json({ success: true, message: "Update order status endpoint - to be implemented" });
-});
-
-app.get("/api/admin/orders/export", (req, res) => {
-  res.json({ success: true, message: "Export orders endpoint - to be implemented" });
-});
-
-// Admin Coupons Routes
-app.get("/api/admin/coupons", (req, res) => {
-  res.json({ success: true, message: "Get coupons endpoint - to be implemented" });
-});
-
-app.post("/api/admin/coupons", (req, res) => {
-  res.json({ success: true, message: "Create coupon endpoint - to be implemented" });
-});
-
-app.patch("/api/admin/coupons/:id", (req, res) => {
-  res.json({ success: true, message: "Update coupon endpoint - to be implemented" });
-});
-
-app.delete("/api/admin/coupons/:id", (req, res) => {
-  res.json({ success: true, message: "Delete coupon endpoint - to be implemented" });
-});
-
-// Admin Messages Routes
-app.get("/api/admin/messages", (req, res) => {
-  res.json({ success: true, message: "Get messages endpoint - to be implemented" });
-});
-
-app.post("/api/admin/messages/:id/reply", (req, res) => {
-  res.json({ success: true, message: "Reply to message endpoint - to be implemented" });
-});
-
-// Error handling middleware (catch all undefined routes)
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found"
-  });
-});
+// Error handling middleware (must be last)
+app.use(errorMiddleware);
 
 module.exports = app;

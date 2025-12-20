@@ -247,11 +247,6 @@
     retryBtn &&
     sidecardErrEl;
 
-  const PRICES = {
-    domestic: 3200,
-    commercial: 12800,
-  };
-
   const moneyFmt = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
   const formatPKR = (n) => `₨${moneyFmt.format(Math.max(0, Math.round(n)))}`;
 
@@ -275,7 +270,7 @@
       .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
       .join(' ');
 
-  /** @type {{ status: 'idle'|'checking'|'applied'|'invalid', code: string, kind?: 'percent'|'flat', value?: number, percent?: number }} */
+  /** @type {{ status: 'idle'|'applied', code: string }} */
   let couponState = { status: 'idle', code: '' };
 
   /** @type {{ status: 'idle'|'submitting'|'success'|'error', lastPayload: any|null, lastOrder: any|null, lastSnapshot: any|null }} */
@@ -362,27 +357,21 @@
     });
   };
 
+  // Price calculations removed - backend handles all pricing
+  // This function is kept for UI display purposes only (shows placeholders)
   const computeTotals = () => {
     const type = getSelectedType();
     const qty = getQty();
-    const unit = type === 'commercial' ? PRICES.commercial : PRICES.domestic;
-    const subtotal = unit * qty;
-
-    let discount = 0;
-    let discountPct = 0;
-
-    if (couponState.status === 'applied' && couponState.kind && couponState.value) {
-      if (couponState.kind === 'percent') {
-        discountPct = couponState.value;
-        discount = Math.round((subtotal * discountPct) / 100);
-      } else {
-        discount = Math.min(subtotal, couponState.value);
-        discountPct = subtotal > 0 ? Math.round((discount / subtotal) * 100) : 0;
-      }
-    }
-
-    const finalTotal = Math.max(0, subtotal - discount);
-    return { type, qty, unit, subtotal, discount, discountPct, finalTotal };
+    // Prices are calculated on backend - show placeholders in UI
+    return { 
+      type, 
+      qty, 
+      unit: 0, // Will be calculated on backend
+      subtotal: 0, // Will be calculated on backend
+      discount: 0, // Will be calculated on backend
+      discountPct: 0, // Will be calculated on backend
+      finalTotal: 0 // Will be calculated on backend
+    };
   };
 
   const animatePrice = (cb) => {
@@ -396,20 +385,14 @@
   const renderPrice = () => {
     const t = computeTotals();
     animatePrice(() => {
-      unitPriceEl.textContent = formatPKR(t.unit);
+      // Prices calculated on backend - show quantity only
+      unitPriceEl.textContent = '—'; // Price fetched from backend
       qtyDisplayEl.textContent = String(t.qty);
-      totalEl.textContent = formatPKR(t.subtotal);
+      totalEl.textContent = '—'; // Calculated on backend
 
-      const hasDiscount = t.discount > 0 && couponState.status === 'applied';
-      totalEl.classList.toggle('is-struck', hasDiscount);
-      discountRowEl.classList.toggle('is-hidden', !hasDiscount);
-      finalRowEl.classList.toggle('is-hidden', !hasDiscount);
-
-      if (hasDiscount) {
-        discountLabelEl.textContent = 'Discount';
-        discountValueEl.textContent = `${formatPKR(t.discount)} (${t.discountPct}%)`;
-        finalTotalEl.textContent = formatPKR(t.finalTotal);
-      }
+      // Hide discount row (calculated on backend)
+      discountRowEl.classList.add('is-hidden');
+      finalRowEl.classList.add('is-hidden');
     });
   };
 
@@ -459,12 +442,13 @@
     }
 
     // Otherwise, show cart items from CartManager
-    if (window.CartManager) {
+    if (window.CartManager && typeof window.CartManager.getCart === 'function') {
       const cart = window.CartManager.getCart();
-      if (cart.items && cart.items.length > 0) {
+      // Defensive check: ensure cart and cart.items exist and is an array
+      if (cart && Array.isArray(cart.items) && cart.items.length > 0) {
         // Aggregate cart items for display
-        const totalQty = cart.totalItems;
-        const subtotal = cart.subtotal;
+        const totalQty = cart.totalItems || 0;
+        const subtotal = cart.subtotal || 0;
         const firstItem = cart.items[0];
         
         // Update sidecard display
@@ -472,7 +456,7 @@
         if (orderCreatedAtEl) orderCreatedAtEl.textContent = new Date().toLocaleString();
         if (orderEtaEl) orderEtaEl.textContent = '+24 hours';
         
-        const typeLabel = firstItem.type === 'commercial' ? 'Commercial' : 'Domestic';
+        const typeLabel = firstItem && firstItem.type === 'commercial' ? 'Commercial' : 'Domestic';
         if (cart.items.length > 1) {
           if (orderCylinderEl) orderCylinderEl.textContent = `${typeLabel} + ${cart.items.length - 1} more`;
         } else {
@@ -481,7 +465,7 @@
         if (orderQtyEl) orderQtyEl.textContent = String(totalQty);
         if (orderCouponUsedEl) orderCouponUsedEl.textContent = 'No coupon';
 
-        if (bdUnitEl) bdUnitEl.textContent = formatPKR(firstItem.unitPrice);
+        if (bdUnitEl && firstItem) bdUnitEl.textContent = formatPKR(firstItem.unitPrice || 0);
         if (bdSubtotalEl) bdSubtotalEl.textContent = formatPKR(subtotal);
         if (bdDiscountRowEl) bdDiscountRowEl.classList.add('is-hidden');
         if (bdTotalEl) bdTotalEl.textContent = formatPKR(subtotal);
@@ -626,9 +610,10 @@
     }
 
     // If no submitted order but cart has items, open the order form panel
-    if (window.CartManager) {
+    if (window.CartManager && typeof window.CartManager.getCart === 'function') {
       const cart = window.CartManager.getCart();
-      if (cart.items && cart.items.length > 0) {
+      // Defensive check: ensure cart and cart.items exist and is an array
+      if (cart && Array.isArray(cart.items) && cart.items.length > 0) {
         // Close sidecard and open order form panel
         closeSidecard();
         if (typeof window.openOrderPanel === 'function') {
@@ -804,11 +789,13 @@
     return errors;
   };
 
+  // Coupon validation removed - backend handles coupon validation
+  // This function just stores the coupon code for submission
   const applyCoupon = () => {
     const code = couponEl.value.trim().toUpperCase();
     couponEl.value = code;
 
-    // Clear coupon state if user empties the field.
+    // Clear coupon state if user empties the field
     if (!code) {
       couponState = { status: 'idle', code: '' };
       setPlainError(errCouponEl, '');
@@ -816,37 +803,13 @@
       return;
     }
 
-    couponState = { status: 'checking', code };
+    // Store coupon code - validation happens on backend
+    couponState = { status: 'applied', code };
     setPlainError(errCouponEl, '');
-    couponApplyBtn.disabled = true;
-    const prevLabel = couponApplyBtn.textContent;
-    couponApplyBtn.textContent = 'Applying…';
-
-    const delay = 500 + Math.floor(Math.random() * 201); // 500–700ms
-    window.setTimeout(() => {
-      if (code === 'WELCOME10') {
-        couponState = { status: 'applied', code, kind: 'percent', value: 10 };
-        setPlainError(errCouponEl, '');
-      } else if (code === 'FLAT500') {
-        couponState = { status: 'applied', code, kind: 'flat', value: 500 };
-        setPlainError(errCouponEl, '');
-      } else {
-        couponState = { status: 'invalid', code };
-        setPlainError(errCouponEl, 'Invalid coupon code.');
-      }
-
-      couponApplyBtn.disabled = false;
-      couponApplyBtn.textContent = prevLabel || 'Apply';
-
-      // If invalid, remove discounts from totals (but keep the code visible).
-      if (couponState.status !== 'applied') {
-        couponState = { status: 'idle', code: couponState.code };
-      }
-
-      renderPrice();
-    }, delay);
+    renderPrice();
   };
 
+  // Snapshot for UI display only - prices calculated on backend
   const getSubmissionSnapshot = () => {
     const totals = computeTotals();
     const couponCode =
@@ -856,34 +819,59 @@
     return {
       type: totals.type,
       qty: totals.qty,
-      unit: totals.unit,
-      subtotal: totals.subtotal,
-      discount: totals.discount,
-      discountPct: totals.discountPct,
-      finalTotal: totals.finalTotal,
+      unit: 0, // Calculated on backend
+      subtotal: 0, // Calculated on backend
+      discount: 0, // Calculated on backend
+      discountPct: 0, // Calculated on backend
+      finalTotal: 0, // Calculated on backend
       couponCode,
     };
   };
 
-  const mockSubmit = (payload) =>
-    new Promise((resolve, reject) => {
-      const delay = 800 + Math.floor(Math.random() * 201); // 800–1000ms
-      window.setTimeout(() => {
-        // Simulated failure rate.
-        const fail = Math.random() < 0.18;
-        if (fail) {
-          reject(new Error('Simulated network failure. Please retry.'));
-          return;
-        }
-
-        resolve({
-          orderId: `ORD${Date.now()}`,
-          status: 'confirmed',
-          createdAt: new Date(),
-          estimatedDelivery: '+24 hours',
-        });
-      }, delay);
-    });
+  const submitOrder = async (payload) => {
+    // Normalize cylinderType to match backend enum ('Domestic' or 'Commercial')
+    const type = payload.cylinderType 
+      ? payload.cylinderType.charAt(0).toUpperCase() + payload.cylinderType.slice(1).toLowerCase()
+      : '';
+    
+    // Send ONLY user input data (camelCase) - backend calculates prices
+    const requestBody = {
+      customerName: payload.customerName,
+      phone: payload.phone,
+      address: payload.address,
+      cylinderType: type, // 'Domestic' or 'Commercial'
+      quantity: payload.quantity,
+      couponCode: payload.coupon || null, // Optional
+    };
+    
+    try {
+      // Use centralized API config if available, otherwise use default
+      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('orders') 
+        : 'http://localhost:5000/api/orders';
+      
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to create order' }));
+        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+      }
+      
+      const data = await res.json();
+      return { 
+        orderId: data.orderId, 
+        status: 'pending', // Backend sets status to 'pending'
+        createdAt: new Date() 
+      };
+    } catch (error) {
+      console.error('Order submission failed:', error);
+      throw error;
+    }
+  };
 
   const beginSubmit = async () => {
     if (submitState.status === 'submitting' || submitState.status === 'success') return;
@@ -915,19 +903,23 @@
       cylinderType: getSelectedType(),
       quantity: getQty(),
       coupon: couponEl.value.trim().toUpperCase() || null,
-      totals: computeTotals(),
     };
     submitState.lastPayload = payload;
 
     try {
-      const res = await mockSubmit(payload);
+      const res = await submitOrder(payload);
       const snapshot = getSubmissionSnapshot();
 
       submitState.status = 'success';
       submitState.lastOrder = res;
       submitState.lastSnapshot = snapshot;
 
-      // Save order to localStorage
+      localStorage.setItem('userOrder', JSON.stringify({
+        orderId: res.orderId,
+        status: res.status,
+        createdAt: res.createdAt.toISOString(),
+      }));
+
       if (window.OrderStorage) {
         const totals = snapshot;
         window.OrderStorage.saveOrder({
@@ -964,6 +956,7 @@
         setCartIndicator(true);
       }
     } catch (e) {
+      console.error('Order submission error:', e);
       submitState.status = 'error';
       setControlsDisabled(false);
       setSubmitUI('idle', e instanceof Error ? e.message : 'Network error. Please retry.');

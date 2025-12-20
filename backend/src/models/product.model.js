@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../config/db");
 
-const Message = sequelize.define(
-  "Message",
+const Product = sequelize.define(
+  "Product",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -13,28 +13,30 @@ const Message = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    phone: {
-      type: DataTypes.BIGINT,
+    type: {
+      type: DataTypes.ENUM("Domestic", "Commercial"),
       allowNull: false,
     },
-    message: {
-      type: DataTypes.TEXT,
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    isRead: {
+    isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: false,
-      field: "is_read",
+      defaultValue: true,
+      field: "is_active",
     },
   },
   {
     timestamps: true,
     underscored: true,
     createdAt: "created_at",
-    updatedAt: false, // No updated_at for this table
-    tableName: "messages",
+    updatedAt: "updated_at",
+    tableName: "products",
   }
 );
 
-module.exports = Message;
+module.exports = Product;
+
+

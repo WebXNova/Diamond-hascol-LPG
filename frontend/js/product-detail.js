@@ -75,8 +75,12 @@
     };
 
     const calculateTotals = () => {
-      cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-      cart.subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+      // Defensive check: ensure cart.items exists and is an array
+      if (!Array.isArray(cart.items)) {
+        cart.items = [];
+      }
+      cart.totalItems = cart.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      cart.subtotal = cart.items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
     };
 
     const generateItemId = (productId, type, variant) => {
@@ -95,6 +99,10 @@
       },
 
       addItem: (item) => {
+        // Defensive check: ensure cart.items exists and is an array
+        if (!Array.isArray(cart.items)) {
+          cart.items = [];
+        }
         const itemId = generateItemId(item.id, item.type, item.variant);
         const existingIndex = cart.items.findIndex(i => i.itemId === itemId);
 
@@ -124,6 +132,11 @@
       },
 
       updateItem: (itemId, updates) => {
+        // Defensive check: ensure cart.items exists and is an array
+        if (!Array.isArray(cart.items)) {
+          cart.items = [];
+          return false;
+        }
         const index = cart.items.findIndex(i => i.itemId === itemId);
         if (index === -1) return false;
 
@@ -142,6 +155,11 @@
       },
 
       removeItem: (itemId) => {
+        // Defensive check: ensure cart.items exists and is an array
+        if (!Array.isArray(cart.items)) {
+          cart.items = [];
+          return false;
+        }
         const index = cart.items.findIndex(i => i.itemId === itemId);
         if (index === -1) return false;
 
