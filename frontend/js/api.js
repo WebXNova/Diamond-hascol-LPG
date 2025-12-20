@@ -8,12 +8,15 @@ const API_CONFIG = {
   endpoints: {
     orders: '/api/orders',
     contact: '/api/contact',
+    adminOrders: '/api/admin/orders',
+    adminMessages: '/api/admin/messages',
+    adminCoupons: '/api/admin/coupons',
   },
 };
 
 /**
  * Get full API URL for an endpoint
- * @param {string} endpoint - Endpoint path (e.g., 'orders', 'contact')
+ * @param {string} endpoint - Endpoint path (e.g., 'orders', 'contact', 'adminOrders', 'adminMessages')
  * @returns {string} Full URL
  */
 function getApiUrl(endpoint) {
@@ -26,7 +29,7 @@ function getApiUrl(endpoint) {
 
 /**
  * Make API request
- * @param {string} endpoint - Endpoint name ('orders' or 'contact')
+ * @param {string} endpoint - Endpoint name ('orders', 'contact', 'adminOrders', 'adminMessages', etc.)
  * @param {object} options - Fetch options
  * @returns {Promise<Response>}
  */

@@ -1,11 +1,10 @@
 /**
  * Messages Management Module
  * Handles messages list, read/unread status, and message details
+ * Connected to backend API
  */
 
-import { mockMessages } from '../../data/mock-data.js';
-
-let currentMessages = [...mockMessages];
+let currentMessages = [];
 let currentFilter = 'all'; // all, read, unread
 
 /**
@@ -23,10 +22,37 @@ function formatDate(dateString) {
 }
 
 /**
+ * Fetch messages from backend API
+ */
+async function fetchMessages() {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminMessages') : 'http://localhost:5000/api/admin/messages';
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch messages: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      currentMessages = data.data;
+      return currentMessages;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    showNotification('Failed to load messages. Please refresh the page.', 'error');
+    return [];
+  }
+}
+
+/**
  * Filter messages
  */
 function filterMessages() {
-  let filtered = [...mockMessages];
+  let filtered = [...currentMessages];
 
   if (currentFilter === 'read') {
     filtered = filtered.filter(msg => msg.isRead);
@@ -46,6 +72,8 @@ function filterMessages() {
  */
 function renderMessages() {
   const messagesContainer = document.getElementById('messages-list');
+  if (!messagesContainer) return;
+  
   const filtered = filterMessages();
 
   if (filtered.length === 0) {
@@ -75,7 +103,6 @@ function renderMessages() {
         </p>
       </div>
       <div class="admin-message-item__meta" style="margin-top: 0.75rem; display: flex; gap: 1rem; font-size: var(--fs-0); color: var(--text-500);">
-        <span>📧 ${message.email}</span>
         <span>📞 ${message.phone}</span>
       </div>
     </div>
@@ -85,121 +112,111 @@ function renderMessages() {
 /**
  * View message details
  */
-window.viewMessage = function(messageId) {
-  const message = mockMessages.find(m => m.id === messageId);
-  if (!message) return;
+window.viewMessage = async function(messageId) {
+  try {
+    // Find message in current list
+    const message = currentMessages.find(m => m.id.toString() === messageId.toString());
+    if (!message) {
+      showNotification('Message not found', 'error');
+      return;
+    }
 
-  // Mark as read
-  if (!message.isRead) {
-    message.isRead = true;
+    // Mark as read if not already read
+    if (!message.isRead) {
+      await markMessageAsRead(messageId);
+    }
+
+    const modal = document.getElementById('message-details-modal');
+    const modalContent = document.getElementById('message-details-content');
+    
+    if (!modal || !modalContent) {
+      console.error('Modal elements not found');
+      return;
+    }
+    
+    modalContent.innerHTML = `
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Message Details</h3>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Message ID:</span>
+              <strong>#${message.id}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Date:</span>
+              <span>${formatDate(message.createdAt)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Status:</span>
+              <span class="admin-badge ${message.isRead ? 'admin-badge--delivered' : 'admin-badge--pending'}">
+                ${message.isRead ? 'Read' : 'Unread'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Contact Information</h3>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Name:</span>
+              <strong>${message.name}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Phone:</span>
+              <a href="tel:${message.phone}" style="color: var(--color-brand); text-decoration: none;">${message.phone}</a>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Message</h3>
+          <div style="background: var(--bg-1); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <p style="color: var(--text-700); line-height: 1.7; margin: 0; white-space: pre-wrap;">${message.message}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('show');
+    
+    // Refresh messages to update read status
+    await fetchMessages();
     renderMessages();
+  } catch (error) {
+    console.error('Error viewing message:', error);
+    showNotification('Failed to load message details', 'error');
   }
-
-  const modal = document.getElementById('message-details-modal');
-  const modalContent = document.getElementById('message-details-content');
-  
-  modalContent.innerHTML = `
-    <div style="display: grid; gap: 1.5rem;">
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Message Details</h3>
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Message ID:</span>
-            <strong>${message.id}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Date:</span>
-            <span>${formatDate(message.createdAt)}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Status:</span>
-            <span class="admin-badge ${message.isRead ? 'admin-badge--delivered' : 'admin-badge--pending'}">
-              ${message.isRead ? 'Read' : 'Unread'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Contact Information</h3>
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Name:</span>
-            <strong>${message.name}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Email:</span>
-            <a href="mailto:${message.email}" style="color: var(--color-brand); text-decoration: none;">${message.email}</a>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Phone:</span>
-            <a href="tel:${message.phone}" style="color: var(--color-brand); text-decoration: none;">${message.phone}</a>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Message</h3>
-        <div style="background: var(--bg-1); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
-          <p style="color: var(--text-700); line-height: 1.7; margin: 0; white-space: pre-wrap;">${message.message}</p>
-        </div>
-      </div>
-
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Reply</h3>
-        <form id="message-reply-form" onsubmit="return false;">
-          <div class="admin-form-group">
-            <label for="reply-subject" class="admin-form-label">Subject</label>
-            <input
-              type="text"
-              id="reply-subject"
-              class="admin-form-input"
-              placeholder="Re: Customer Inquiry"
-              value="Re: ${message.message.substring(0, 50)}..."
-            >
-          </div>
-          <div class="admin-form-group">
-            <label for="reply-message" class="admin-form-label">Message</label>
-            <textarea
-              id="reply-message"
-              class="admin-form-input"
-              rows="6"
-              placeholder="Type your reply here..."
-              style="resize: vertical; font-family: var(--font-body);"
-            ></textarea>
-          </div>
-          <div style="margin-top: 1rem;">
-            <button type="button" class="admin-btn admin-btn--primary" onclick="sendReply('${message.id}')">
-              Send Reply
-            </button>
-            <button type="button" class="admin-btn admin-btn--secondary" onclick="closeMessageDetails()" style="margin-left: 0.5rem;">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-
-  modal.classList.add('show');
 };
 
 /**
- * Send reply (mock - UI only)
+ * Mark message as read via API
  */
-window.sendReply = function(messageId) {
-  const subject = document.getElementById('reply-subject').value;
-  const message = document.getElementById('reply-message').value;
+async function markMessageAsRead(messageId) {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminMessages') : 'http://localhost:5000/api/admin/messages';
+    const response = await fetch(`${apiUrl}/${messageId}/read`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!message.trim()) {
-    alert('Please enter a reply message');
-    return;
+    if (!response.ok) {
+      throw new Error('Failed to mark message as read');
+    }
+
+    // Update local state
+    const message = currentMessages.find(m => m.id.toString() === messageId.toString());
+    if (message) {
+      message.isRead = true;
+    }
+  } catch (error) {
+    console.error('Error marking message as read:', error);
+    throw error;
   }
-
-  // In production: POST /api/admin/messages/:id/reply
-  alert(`Reply sent to message ${messageId}\n\nSubject: ${subject}\n\nThis is a mock action. In production, this would send an email.`);
-  closeMessageDetails();
-};
+}
 
 /**
  * Close message details modal
@@ -212,23 +229,44 @@ window.closeMessageDetails = function() {
 /**
  * Toggle message read status
  */
-window.toggleMessageRead = function(messageId) {
-  const message = mockMessages.find(m => m.id === messageId);
-  if (message) {
-    message.isRead = !message.isRead;
+window.toggleMessageRead = async function(messageId) {
+  try {
+    const message = currentMessages.find(m => m.id.toString() === messageId.toString());
+    if (!message) return;
+
+    if (!message.isRead) {
+      await markMessageAsRead(messageId);
+    } else {
+      // Note: Backend doesn't support unread, but we can implement if needed
+      showNotification('Cannot mark as unread', 'info');
+      return;
+    }
+
+    await fetchMessages();
     renderMessages();
+  } catch (error) {
+    console.error('Error toggling message read status:', error);
+    showNotification('Failed to update message status', 'error');
   }
 };
 
 /**
  * Mark all as read
  */
-window.markAllAsRead = function() {
-  mockMessages.forEach(msg => {
-    msg.isRead = true;
-  });
-  renderMessages();
-  showNotification('All messages marked as read', 'success');
+window.markAllAsRead = async function() {
+  try {
+    const unreadMessages = currentMessages.filter(msg => !msg.isRead);
+    
+    // Mark each unread message as read
+    await Promise.all(unreadMessages.map(msg => markMessageAsRead(msg.id)));
+    
+    await fetchMessages();
+    renderMessages();
+    showNotification('All messages marked as read', 'success');
+  } catch (error) {
+    console.error('Error marking all as read:', error);
+    showNotification('Failed to mark all messages as read', 'error');
+  }
 };
 
 /**
@@ -241,8 +279,8 @@ function showNotification(message, type = 'info') {
     top: 2rem;
     right: 2rem;
     padding: 1rem 1.5rem;
-    background: ${type === 'success' ? '#d1fae5' : '#dbeafe'};
-    color: ${type === 'success' ? '#065f46' : '#1e40af'};
+    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
+    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 2000;
@@ -260,7 +298,21 @@ function showNotification(message, type = 'info') {
 /**
  * Initialize messages page
  */
-export function initMessages() {
+export async function initMessages() {
+  // Show loading state
+  const messagesContainer = document.getElementById('messages-list');
+  if (messagesContainer) {
+    messagesContainer.innerHTML = `
+      <div style="text-align: center; padding: 3rem; color: var(--text-500);">
+        <p>Loading messages...</p>
+      </div>
+    `;
+  }
+
+  // Fetch messages from backend
+  await fetchMessages();
+  renderMessages();
+
   // Filter dropdown
   const filterSelect = document.getElementById('messages-filter');
   if (filterSelect) {
@@ -276,8 +328,15 @@ export function initMessages() {
     markAllReadBtn.addEventListener('click', markAllAsRead);
   }
 
-  // Initial render
-  renderMessages();
+  // Refresh button (if exists)
+  const refreshBtn = document.getElementById('messages-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      await fetchMessages();
+      renderMessages();
+      showNotification('Messages refreshed', 'success');
+    });
+  }
 }
 
 // Auto-initialize

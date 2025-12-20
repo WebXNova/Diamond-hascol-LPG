@@ -126,26 +126,26 @@ const createOrder = async (req, res, next) => {
       throw pricingError;
     }
 
-    // Create order (map camelCase to snake_case for database)
+    // Create order (use camelCase property names - Sequelize maps to snake_case database columns)
     // #region agent log
     try {
-      fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:76',message:'Creating order in database',data:{customer_name:customerName.trim(),phone:phoneNumber.toString(),cylinder_type:cylinderType,quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})+'\n');
+      fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:76',message:'Creating order in database',data:{customerName:customerName.trim(),phone:phoneNumber.toString(),cylinderType:cylinderType,quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})+'\n');
     } catch(e) {}
     // #endregion
     
     let order;
     try {
       order = await Order.create({
-        customer_name: customerName.trim(),
+        customerName: customerName.trim(),
         phone: phoneNumber,
         address: address.trim(),
-        cylinder_type: cylinderType,
+        cylinderType: cylinderType,
         quantity: quantity,
-        price_per_cylinder: pricing.pricePerCylinder,
+        pricePerCylinder: pricing.pricePerCylinder,
         subtotal: pricing.subtotal,
         discount: pricing.discount,
-        total_price: pricing.total,
-        coupon_code: couponCode ? couponCode.trim().toUpperCase() : null,
+        totalPrice: pricing.total,
+        couponCode: couponCode ? couponCode.trim().toUpperCase() : null,
         status: 'pending',
       });
       // #region agent log

@@ -1,11 +1,10 @@
 /**
  * Orders Management Module
  * Handles orders list, filtering, searching, and status updates
+ * Connected to backend API
  */
 
-import { mockOrders } from '../../data/mock-data.js';
-
-let currentOrders = [...mockOrders];
+let currentOrders = [];
 let currentFilters = {
   status: 'all',
   search: '',
@@ -49,10 +48,37 @@ function getStatusBadgeClass(status) {
 }
 
 /**
+ * Fetch orders from backend API
+ */
+async function fetchOrders() {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch orders: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      currentOrders = data.data;
+      return currentOrders;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    showNotification('Failed to load orders. Please refresh the page.', 'error');
+    return [];
+  }
+}
+
+/**
  * Filter orders based on current filters
  */
 function filterOrders() {
-  let filtered = [...mockOrders];
+  let filtered = [...currentOrders];
 
   // Status filter
   if (currentFilters.status !== 'all') {
@@ -91,6 +117,8 @@ function filterOrders() {
  */
 function renderOrders() {
   const tableBody = document.getElementById('orders-table-body');
+  if (!tableBody) return;
+  
   const filtered = filterOrders();
 
   if (filtered.length === 0) {
@@ -106,7 +134,7 @@ function renderOrders() {
 
   tableBody.innerHTML = filtered.map(order => `
     <tr>
-      <td><strong>${order.id}</strong></td>
+      <td><strong>#${order.id}</strong></td>
       <td>${order.customerName}</td>
       <td>${order.phone}</td>
       <td>${order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)}</td>
@@ -141,93 +169,144 @@ function renderOrders() {
 }
 
 /**
- * Update order status (mock - UI only)
+ * Update order status via API
  */
-function updateOrderStatus(orderId, newStatus) {
-  // In production: PATCH /api/admin/orders/:id/status
-  const order = mockOrders.find(o => o.id === orderId);
-  if (order) {
-    order.status = newStatus;
+async function updateOrderStatus(orderId, newStatus) {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    const response = await fetch(`${apiUrl}/${orderId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to update order status' }));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    // Refresh orders from backend
+    await fetchOrders();
     renderOrders();
+    showNotification(`Order #${orderId} status updated to ${newStatus}`, 'success');
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    showNotification(`Failed to update order status: ${error.message}`, 'error');
     
-    // Show success message
-    showNotification(`Order ${orderId} status updated to ${newStatus}`, 'success');
+    // Revert the select to previous value
+    const select = document.querySelector(`[data-order-id="${orderId}"]`);
+    if (select) {
+      select.value = select.dataset.currentStatus;
+    }
   }
 }
 
 /**
  * View order details
  */
-window.viewOrderDetails = function(orderId) {
-  const order = mockOrders.find(o => o.id === orderId);
-  if (!order) return;
+window.viewOrderDetails = async function(orderId) {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    const response = await fetch(`${apiUrl}/${orderId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch order details');
+    }
+    
+    const data = await response.json();
+    const order = data.data;
 
-  const modal = document.getElementById('order-details-modal');
-  const modalContent = document.getElementById('order-details-content');
-  
-  modalContent.innerHTML = `
-    <div style="display: grid; gap: 1.5rem;">
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Order Information</h3>
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Order ID:</span>
-            <strong>${order.id}</strong>
+    const modal = document.getElementById('order-details-modal');
+    const modalContent = document.getElementById('order-details-content');
+    
+    if (!modal || !modalContent) {
+      console.error('Modal elements not found');
+      return;
+    }
+    
+    modalContent.innerHTML = `
+      <div style="display: grid; gap: 1.5rem;">
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Order Information</h3>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Order ID:</span>
+              <strong>#${order.id}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Status:</span>
+              <span class="admin-badge ${getStatusBadgeClass(order.status)}">${order.status}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Date:</span>
+              <span>${formatDate(order.createdAt)}</span>
+            </div>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Status:</span>
-            <span class="admin-badge ${getStatusBadgeClass(order.status)}">${order.status}</span>
+        </div>
+
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Customer Information</h3>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Name:</span>
+              <strong>${order.customerName}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Phone:</span>
+              <span>${order.phone}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Address:</span>
+              <span style="text-align: right; max-width: 60%;">${order.address}</span>
+            </div>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Date:</span>
-            <span>${formatDate(order.createdAt)}</span>
+        </div>
+
+        <div>
+          <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Order Details</h3>
+          <div style="display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Cylinder Type:</span>
+              <strong>${order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Quantity:</span>
+              <strong>${order.quantity}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Price per Cylinder:</span>
+              <strong>${formatCurrency(order.pricePerCylinder)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Subtotal:</span>
+              <strong>${formatCurrency(order.subtotal)}</strong>
+            </div>
+            ${order.discount > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Discount:</span>
+              <strong style="color: var(--color-success);">-${formatCurrency(order.discount)}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-500);">Coupon:</span>
+              <span>${order.couponCode || 'None'}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+              <span style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900);">Total:</span>
+              <strong style="font-size: var(--fs-3); color: var(--color-brand);">${formatCurrency(order.total)}</strong>
+            </div>
           </div>
         </div>
       </div>
+    `;
 
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Customer Information</h3>
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Name:</span>
-            <strong>${order.customerName}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Phone:</span>
-            <span>${order.phone}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Address:</span>
-            <span style="text-align: right; max-width: 60%;">${order.address}</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900); margin-bottom: 1rem;">Order Details</h3>
-        <div style="display: grid; gap: 0.75rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Cylinder Type:</span>
-            <strong>${order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Quantity:</span>
-            <strong>${order.quantity}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-500);">Coupon:</span>
-            <span>${order.coupon || 'None'}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding-top: 0.75rem; border-top: 1px solid var(--border);">
-            <span style="font-size: var(--fs-2); font-weight: 600; color: var(--text-900);">Total:</span>
-            <strong style="font-size: var(--fs-3); color: var(--color-brand);">${formatCurrency(order.total)}</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  modal.classList.add('show');
+    modal.classList.add('show');
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    showNotification('Failed to load order details', 'error');
+  }
 };
 
 /**
@@ -242,15 +321,14 @@ window.closeOrderDetails = function() {
  * Show notification
  */
 function showNotification(message, type = 'info') {
-  // Simple notification (can be enhanced with a toast component)
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed;
     top: 2rem;
     right: 2rem;
     padding: 1rem 1.5rem;
-    background: ${type === 'success' ? '#d1fae5' : '#dbeafe'};
-    color: ${type === 'success' ? '#065f46' : '#1e40af'};
+    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
+    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
     z-index: 2000;
@@ -268,7 +346,23 @@ function showNotification(message, type = 'info') {
 /**
  * Initialize orders page
  */
-export function initOrders() {
+export async function initOrders() {
+  // Show loading state
+  const tableBody = document.getElementById('orders-table-body');
+  if (tableBody) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
+          Loading orders...
+        </td>
+      </tr>
+    `;
+  }
+
+  // Fetch orders from backend
+  await fetchOrders();
+  renderOrders();
+
   // Search input
   const searchInput = document.getElementById('orders-search');
   if (searchInput) {
@@ -307,7 +401,7 @@ export function initOrders() {
   // Clear filters
   const clearFiltersBtn = document.getElementById('orders-clear-filters');
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', () => {
+    clearFiltersBtn.addEventListener('click', async () => {
       currentFilters = {
         status: 'all',
         search: '',
@@ -318,12 +412,20 @@ export function initOrders() {
       if (statusFilter) statusFilter.value = 'all';
       if (dateFromInput) dateFromInput.value = '';
       if (dateToInput) dateToInput.value = '';
+      await fetchOrders();
       renderOrders();
     });
   }
 
-  // Initial render
-  renderOrders();
+  // Refresh button (if exists)
+  const refreshBtn = document.getElementById('orders-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      await fetchOrders();
+      renderOrders();
+      showNotification('Orders refreshed', 'success');
+    });
+  }
 }
 
 // Auto-initialize
