@@ -1,2 +1,0 @@
-// User messages logic
-
