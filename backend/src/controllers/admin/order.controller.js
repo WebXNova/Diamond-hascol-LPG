@@ -15,29 +15,39 @@ const getOrders = async (req, res, next) => {
     }
 
     // Fetch orders from database
+    // Use Sequelize.literal for ordering to ensure it works with underscored fields
+    const { Sequelize } = require('sequelize');
     const orders = await Order.findAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['created_at', 'DESC']],
+      order: [[Sequelize.literal('created_at'), 'DESC']],
     });
 
+    console.log(`📦 Fetched ${orders.length} orders from database`);
+
     // Format orders for frontend
-    const formattedOrders = orders.map(order => ({
-      id: order.id,
-      customerName: order.customerName,
-      phone: order.phone.toString(),
-      address: order.address,
-      cylinderType: order.cylinderType,
-      quantity: order.quantity,
-      pricePerCylinder: parseFloat(order.pricePerCylinder),
-      subtotal: parseFloat(order.subtotal),
-      discount: parseFloat(order.discount),
-      total: parseFloat(order.totalPrice),
-      couponCode: order.couponCode,
-      status: order.status,
-      createdAt: order.created_at,
-    }));
+    // Sequelize returns camelCase properties even with underscored: true
+    const formattedOrders = orders.map(order => {
+      // Safely get createdAt - Sequelize returns it as createdAt (camelCase)
+      const createdAt = order.createdAt || order.get('createdAt') || order.get('created_at') || new Date();
+      
+      return {
+        id: order.id,
+        customerName: order.customerName || '',
+        phone: order.phone ? order.phone.toString() : '',
+        address: order.address || '',
+        cylinderType: order.cylinderType || '',
+        quantity: order.quantity || 0,
+        pricePerCylinder: parseFloat(order.pricePerCylinder) || 0,
+        subtotal: parseFloat(order.subtotal) || 0,
+        discount: parseFloat(order.discount) || 0,
+        total: parseFloat(order.totalPrice) || 0,
+        couponCode: order.couponCode || null,
+        status: order.status || 'pending',
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -45,6 +55,7 @@ const getOrders = async (req, res, next) => {
       count: formattedOrders.length,
     });
   } catch (error) {
+    console.error('❌ Error fetching orders:', error);
     next(error);
   }
 };
@@ -61,25 +72,29 @@ const getOrderById = async (req, res, next) => {
 
     if (!order) {
       return res.status(404).json({
+        success: false,
         error: 'Order not found',
       });
     }
 
+    // Safely get createdAt - Sequelize returns it as createdAt (camelCase)
+    const createdAt = order.createdAt || order.get('createdAt') || order.get('created_at') || new Date();
+
     // Format order for frontend
     const formattedOrder = {
       id: order.id,
-      customerName: order.customerName,
-      phone: order.phone.toString(),
-      address: order.address,
-      cylinderType: order.cylinderType,
-      quantity: order.quantity,
-      pricePerCylinder: parseFloat(order.pricePerCylinder),
-      subtotal: parseFloat(order.subtotal),
-      discount: parseFloat(order.discount),
-      total: parseFloat(order.totalPrice),
-      couponCode: order.couponCode,
-      status: order.status,
-      createdAt: order.created_at,
+      customerName: order.customerName || '',
+      phone: order.phone ? order.phone.toString() : '',
+      address: order.address || '',
+      cylinderType: order.cylinderType || '',
+      quantity: order.quantity || 0,
+      pricePerCylinder: parseFloat(order.pricePerCylinder) || 0,
+      subtotal: parseFloat(order.subtotal) || 0,
+      discount: parseFloat(order.discount) || 0,
+      total: parseFloat(order.totalPrice) || 0,
+      couponCode: order.couponCode || null,
+      status: order.status || 'pending',
+      createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
     };
 
     return res.status(200).json({
@@ -87,6 +102,7 @@ const getOrderById = async (req, res, next) => {
       data: formattedOrder,
     });
   } catch (error) {
+    console.error('❌ Error fetching order by ID:', error);
     next(error);
   }
 };
@@ -100,10 +116,11 @@ const updateOrderStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Validate status
-    const validStatuses = ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'];
+    // Validate status - must match Order model ENUM values
+    const validStatuses = ['pending', 'confirmed', 'delivered', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
+        success: false,
         error: `Status must be one of: ${validStatuses.join(', ')}`,
       });
     }

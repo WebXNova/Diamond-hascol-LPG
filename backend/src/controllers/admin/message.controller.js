@@ -15,22 +15,32 @@ const getMessages = async (req, res, next) => {
     }
 
     // Fetch messages from database
+    // Use Sequelize.literal for ordering to ensure it works with underscored fields
+    const { Sequelize } = require('sequelize');
     const messages = await Message.findAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['created_at', 'DESC']],
+      order: [[Sequelize.literal('created_at'), 'DESC']],
     });
 
+    console.log(`📨 Fetched ${messages.length} messages from database`);
+
     // Format messages for frontend with safe parsing
-    const formattedMessages = messages.map(message => ({
-      id: message.id || 0,
-      name: message.name || '',
-      phone: message.phone ? message.phone.toString() : '',
-      message: message.message || '',
-      isRead: message.isRead || false,
-      createdAt: message.createdAt ? message.createdAt.toISOString() : new Date().toISOString(),
-    }));
+    // Sequelize returns camelCase properties even with underscored: true
+    const formattedMessages = messages.map(message => {
+      // Safely get createdAt - Sequelize returns it as createdAt (camelCase)
+      const createdAt = message.createdAt || message.get('createdAt') || message.get('created_at') || new Date();
+      
+      return {
+        id: message.id || 0,
+        name: message.name || '',
+        phone: message.phone ? message.phone.toString() : '',
+        message: message.message || '',
+        isRead: message.isRead || false,
+        createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -38,6 +48,7 @@ const getMessages = async (req, res, next) => {
       count: formattedMessages.length,
     });
   } catch (error) {
+    console.error('❌ Error fetching messages:', error);
     next(error);
   }
 };

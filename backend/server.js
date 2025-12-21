@@ -51,33 +51,11 @@ const PORT = process.env.PORT || 5000;
  */
 async function initializeProducts() {
   try {
-    // First, check if products table exists by trying to query it
-    try {
-      await Product.findOne({ limit: 1 });
-    } catch (tableError) {
-      // Products table doesn't exist - create it (matching real schema)
-      console.log("📦 Products table doesn't exist, creating it...");
-      await sequelize.query(`
-        CREATE TABLE IF NOT EXISTS products (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(100) NOT NULL,
-          category ENUM('Domestic', 'Commercial') NOT NULL,
-          description TEXT NULL,
-          price DECIMAL(10,2) NOT NULL,
-          image_url VARCHAR(500) NULL,
-          in_stock BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-      `);
-      console.log("✅ Products table created");
-    }
-    
     // Check if products exist (using correct field: category)
     const domesticProduct = await Product.findOne({ where: { category: 'Domestic' } }).catch(() => null);
     const commercialProduct = await Product.findOne({ where: { category: 'Commercial' } }).catch(() => null);
     
-    // Create Domestic product if it doesn't exist (using correct fields: category, inStock)
+    // Create Domestic product if it doesn't exist
     if (!domesticProduct) {
       await Product.create({
         name: 'Domestic LPG Cylinder',
@@ -88,7 +66,7 @@ async function initializeProducts() {
       console.log("✅ Created Domestic product in database");
     }
     
-    // Create Commercial product if it doesn't exist (using correct fields: category, inStock)
+    // Create Commercial product if it doesn't exist
     if (!commercialProduct) {
       await Product.create({
         name: 'Commercial LPG Cylinder',
@@ -114,8 +92,8 @@ const startServer = async () => {
       console.error("⚠️  Warning: Database connection failed, but server will continue");
     } else {
       // Sync database schema - DO NOT use force: true as it drops existing tables
-      // Only create tables if they don't exist
-      await sequelize.sync({ alter: false }); // Set alter: true to update schema without dropping data
+      // Only create tables if they don't exist (safe for production)
+      await sequelize.sync({ alter: false });
       console.log("✅ Database schema synced with models (tables created if they don't exist)");
       
       // Initialize products if they don't exist
