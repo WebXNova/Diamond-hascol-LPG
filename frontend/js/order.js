@@ -1003,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         throw new Error(errorData.error || errorData.message || `HTTP ${res.status}: ${res.statusText}`);
       }
-      
+       
       let data;
       try {
         data = await res.json();

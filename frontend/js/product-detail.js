@@ -11,6 +11,8 @@
   // GLOBAL CART STATE MANAGER
   // ============================================
   const CartManager = (() => {
+    const STORAGE_KEY = 'lpg_cart_v1';
+
     let cart = {
       items: [],
       totalItems: 0,
@@ -32,9 +34,59 @@
       cart.subtotal = cart.items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
     };
 
+    const loadFromStorage = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+        if (!Array.isArray(parsed.items)) return;
+
+        // Normalize items to expected shape
+        cart.items = parsed.items
+          .filter((it) => it && typeof it === 'object')
+          .map((it) => {
+            const quantity = Math.max(1, parseInt(it.quantity, 10) || 1);
+            const unitPrice = Number(it.unitPrice) || 0;
+            const totalPrice = unitPrice * quantity;
+            return {
+              itemId: String(it.itemId || ''),
+              id: it.id,
+              name: String(it.name || 'Product'),
+              type: String(it.type || 'domestic'),
+              variant: String(it.variant || 'default'),
+              unitPrice,
+              quantity,
+              totalPrice,
+              meta: (it.meta && typeof it.meta === 'object') ? it.meta : {}
+            };
+          })
+          .filter((it) => !!it.itemId);
+
+        calculateTotals();
+      } catch (e) {
+        console.warn('Failed to load cart from storage:', e);
+      }
+    };
+
+    const saveToStorage = () => {
+      try {
+        const payload = {
+          items: Array.isArray(cart.items) ? cart.items : [],
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('Failed to save cart to storage:', e);
+      }
+    };
+
     const generateItemId = (productId, type, variant) => {
       return `${productId}-${type}-${variant || 'default'}`;
     };
+
+    // Hydrate cart once on module load
+    loadFromStorage();
 
     return {
       getCart: () => ({ ...cart }),
@@ -76,6 +128,7 @@
         }
 
         calculateTotals();
+        saveToStorage();
         notifyListeners();
         return cart;
       },
@@ -99,6 +152,7 @@
         }
 
         calculateTotals();
+        saveToStorage();
         notifyListeners();
         return true;
       },
@@ -114,12 +168,18 @@
 
         cart.items.splice(index, 1);
         calculateTotals();
+        saveToStorage();
         notifyListeners();
         return true;
       },
 
       clearCart: () => {
         cart = { items: [], totalItems: 0, subtotal: 0 };
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          // ignore
+        }
         notifyListeners();
       }
     };
@@ -750,5 +810,8 @@
   // Expose CartManager globally for integration with existing order.js
   window.CartManager = CartManager;
   window.openProductDetail = openProductDetail;
+
+  // Ensure indicators are correct on initial load (after storage hydration)
+  updateCartIndicators();
 })();
 
