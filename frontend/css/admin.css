@@ -1428,3 +1428,35 @@
     padding: 0;
   }
 }
+
+/* Call Customer Button */
+.admin-call-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  flex-shrink: 0;
+}
+
+.admin-call-btn:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+}
+
+.admin-call-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.admin-call-btn svg {
+  width: 16px;
+  height: 16px;
+}
