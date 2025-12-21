@@ -4,6 +4,11 @@ const { sequelize } = require("../config/db");
 const Order = sequelize.define(
   "Order",
   {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
     customerName: {
       type: DataTypes.STRING(100),
       allowNull: false,
@@ -65,6 +70,8 @@ const Order = sequelize.define(
     createdAt: "created_at",
     updatedAt: "updated_at",
     tableName: "orders",
+    // Ensure Sequelize doesn't try to modify the table structure
+    freezeTableName: true,
   }
 );
 

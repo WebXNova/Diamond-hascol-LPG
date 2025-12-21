@@ -1,17 +1,67 @@
 /**
  * Order History & Analytics Module
  * Handles order history display, date filtering, and analytics
+ * Connected to backend API
  */
 
-import { mockOrders } from '../../data/mock-data.js';
-
-// Use mockOrders for history (in production, this would be a separate API call)
-let currentHistory = [...mockOrders];
+let currentHistory = [];
 let currentFilters = {
   dateFrom: '',
   dateTo: '',
   status: 'all'
 };
+
+/**
+ * Fetch orders from backend API
+ */
+async function fetchHistory() {
+  try {
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    
+    // Build query params
+    const params = new URLSearchParams();
+    if (currentFilters.status !== 'all') {
+      params.append('status', currentFilters.status);
+    }
+    params.append('limit', '1000'); // Get all orders for history
+    
+    const response = await fetch(`${apiUrl}?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch orders: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success && Array.isArray(data.data)) {
+      // Transform backend data to match frontend format
+      currentHistory = data.data.map(order => ({
+        id: order.id,
+        customerName: order.customerName || 'N/A',
+        phone: order.phone || 'N/A',
+        cylinderType: order.cylinderType?.toLowerCase() || 'domestic',
+        quantity: order.quantity || 0,
+        total: order.total || order.totalPrice || 0,
+        status: order.status || 'pending',
+        createdAt: order.createdAt || new Date().toISOString(),
+        address: order.address || '',
+        coupon: order.couponCode || null
+      }));
+      return currentHistory;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    showNotification('Failed to load order history. Please refresh the page.', 'error');
+    return [];
+  }
+}
 
 /**
  * Format currency
@@ -49,10 +99,10 @@ function getStatusBadgeClass(status) {
 }
 
 /**
- * Filter history
+ * Filter history (client-side filtering on already fetched data)
  */
 function filterHistory() {
-  let filtered = [...mockOrders];
+  let filtered = [...currentHistory];
 
   // Status filter
   if (currentFilters.status !== 'all') {
@@ -62,7 +112,12 @@ function filterHistory() {
   // Date filters
   if (currentFilters.dateFrom) {
     const fromDate = new Date(currentFilters.dateFrom);
-    filtered = filtered.filter(order => new Date(order.createdAt) >= fromDate);
+    fromDate.setHours(0, 0, 0, 0);
+    filtered = filtered.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      orderDate.setHours(0, 0, 0, 0);
+      return orderDate >= fromDate;
+    });
   }
 
   if (currentFilters.dateTo) {
@@ -74,7 +129,6 @@ function filterHistory() {
   // Sort by date (newest first)
   filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  currentHistory = filtered;
   return filtered;
 }
 
@@ -198,7 +252,22 @@ window.exportOrders = function() {
 /**
  * Initialize history page
  */
-export function initHistory() {
+export async function initHistory() {
+  // Show loading state
+  const tableBody = document.getElementById('history-table-body');
+  if (tableBody) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
+          Loading order history...
+        </td>
+      </tr>
+    `;
+  }
+
+  // Fetch orders from backend
+  await fetchHistory();
+
   // Date filters
   const dateFromInput = document.getElementById('history-date-from');
   if (dateFromInput) {
@@ -231,7 +300,7 @@ export function initHistory() {
   // Clear filters
   const clearFiltersBtn = document.getElementById('history-clear-filters');
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', () => {
+    clearFiltersBtn.addEventListener('click', async () => {
       currentFilters = {
         dateFrom: '',
         dateTo: '',
@@ -240,6 +309,7 @@ export function initHistory() {
       if (dateFromInput) dateFromInput.value = '';
       if (dateToInput) dateToInput.value = '';
       if (statusFilter) statusFilter.value = 'all';
+      await fetchHistory();
       renderHistory();
       renderAnalytics();
     });
@@ -251,9 +321,46 @@ export function initHistory() {
     exportBtn.addEventListener('click', exportOrders);
   }
 
+  // Refresh button (if exists)
+  const refreshBtn = document.getElementById('history-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      await fetchHistory();
+      renderHistory();
+      renderAnalytics();
+      showNotification('Order history refreshed', 'success');
+    });
+  }
+
   // Initial render
   renderHistory();
   renderAnalytics();
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
+    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    animation: slideIn 0.3s var(--ease-out);
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s var(--ease-out)';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
 
 // Auto-initialize

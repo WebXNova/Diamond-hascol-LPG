@@ -25,76 +25,33 @@ const createOrder = async (req, res, next) => {
   // #endregion
   
   try {
-    // Extract and validate required fields (accept camelCase from frontend)
+    // Log incoming request for debugging
+    console.log('📥 createOrder called with body:', req.body);
+    
+    // Extract fields (validation middleware handles validation)
     const { customerName, phone, address, cylinderType, quantity, couponCode } = req.body;
+    
+    console.log('📋 Extracted fields:', {
+      customerName,
+      phone,
+      address,
+      cylinderType,
+      quantity,
+      quantityType: typeof quantity,
+      couponCode
+    });
 
-    // Validate required fields
-    if (!customerName || typeof customerName !== 'string' || customerName.trim().length === 0) {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:24',message:'Validation failed: customerName',data:{customerName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})+'\n');
-      } catch(e) {}
-      // #endregion
-      return res.status(400).json({ error: 'Customer name is required' });
-    }
-
-    if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:29',message:'Validation failed: phone',data:{phone},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})+'\n');
-      } catch(e) {}
-      // #endregion
-      return res.status(400).json({ error: 'Phone number is required' });
-    }
-
-    if (!address || typeof address !== 'string' || address.trim().length === 0) {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:33',message:'Validation failed: address',data:{address},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})+'\n');
-      } catch(e) {}
-      // #endregion
-      return res.status(400).json({ error: 'Address is required' });
-    }
-
-    if (!cylinderType || !['Domestic', 'Commercial'].includes(cylinderType)) {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:36',message:'Validation failed: cylinderType',data:{cylinderType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})+'\n');
-      } catch(e) {}
-      // #endregion
-      return res.status(400).json({ error: 'Cylinder type must be Domestic or Commercial' });
-    }
-
-    if (!quantity || typeof quantity !== 'number' || quantity <= 0 || !Number.isInteger(quantity)) {
-      // #region agent log
-      try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:40',message:'Validation failed: quantity',data:{quantity,type:typeof quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})+'\n');
-      } catch(e) {}
-      // #endregion
-      return res.status(400).json({ error: 'Quantity must be a positive integer' });
-    }
-
-    // Sanitize phone (remove non-digits, but keep for validation)
+    // Sanitize phone (validation middleware already sanitized, but ensure it's digits only)
     const phoneDigits = phone.replace(/[^\d]/g, '');
-    if (phoneDigits.length < 7) {
-      return res.status(400).json({ error: 'Phone number is too short' });
-    }
 
     // Convert phone to BIGINT (validate it's a valid number)
     let phoneNumber;
     try {
       phoneNumber = BigInt(phoneDigits);
     } catch (error) {
-      return res.status(400).json({ error: 'Invalid phone number format' });
-    }
-
-    // Reject unknown fields
-    const allowedFields = ['customerName', 'phone', 'address', 'cylinderType', 'quantity', 'couponCode'];
-    const receivedFields = Object.keys(req.body);
-    const unknownFields = receivedFields.filter(field => !allowedFields.includes(field));
-    if (unknownFields.length > 0) {
       return res.status(400).json({ 
-        error: `Unknown fields: ${unknownFields.join(', ')}` 
+        success: false,
+        error: 'Invalid phone number format' 
       });
     }
 
@@ -133,44 +90,131 @@ const createOrder = async (req, res, next) => {
     } catch(e) {}
     // #endregion
     
+    // Prepare order data with all required fields
+    const orderData = {
+      customerName: customerName.trim(),
+      phone: phoneNumber,
+      address: address.trim(),
+      cylinderType: cylinderType,
+      quantity: quantity,
+      pricePerCylinder: pricing.pricePerCylinder,
+      subtotal: pricing.subtotal,
+      discount: pricing.discount || 0,
+      totalPrice: pricing.total,
+      couponCode: couponCode ? couponCode.trim().toUpperCase() : null,
+      status: 'pending',
+    };
+    
+    // #region agent log
+    try {
+      fs.appendFileSync(logPath, JSON.stringify({
+        location: 'order.controller.js:82',
+        message: 'Attempting to create order in database',
+        data: {
+          customerName: orderData.customerName,
+          phone: orderData.phone.toString(),
+          cylinderType: orderData.cylinderType,
+          quantity: orderData.quantity,
+          pricePerCylinder: orderData.pricePerCylinder,
+          subtotal: orderData.subtotal,
+          discount: orderData.discount,
+          totalPrice: orderData.totalPrice,
+          couponCode: orderData.couponCode,
+          status: orderData.status
+        },
+        timestamp: Date.now()
+      }) + '\n');
+    } catch(e) {}
+    // #endregion
+    
     let order;
     try {
-      order = await Order.create({
-        customerName: customerName.trim(),
-        phone: phoneNumber,
-        address: address.trim(),
-        cylinderType: cylinderType,
-        quantity: quantity,
-        pricePerCylinder: pricing.pricePerCylinder,
-        subtotal: pricing.subtotal,
-        discount: pricing.discount,
-        totalPrice: pricing.total,
-        couponCode: couponCode ? couponCode.trim().toUpperCase() : null,
-        status: 'pending',
-      });
+      order = await Order.create(orderData);
+      
+      // Verify order was created
+      if (!order || !order.id) {
+        throw new Error('Order creation failed: No order ID returned');
+      }
+      
       // #region agent log
       try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:91',message:'Order created successfully',data:{orderId:order.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})+'\n');
+        fs.appendFileSync(logPath, JSON.stringify({
+          location: 'order.controller.js:95',
+          message: 'Order created successfully in database',
+          data: {
+            orderId: order.id,
+            customerName: order.customerName,
+            phone: order.phone.toString(),
+            cylinderType: order.cylinderType,
+            quantity: order.quantity,
+            pricePerCylinder: order.pricePerCylinder,
+            subtotal: order.subtotal,
+            discount: order.discount,
+            totalPrice: order.totalPrice,
+            couponCode: order.couponCode,
+            status: order.status,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt
+          },
+          timestamp: Date.now()
+        }) + '\n');
       } catch(e) {}
       // #endregion
+      
+      console.log(`✅ Order #${order.id} created successfully in database`);
+      console.log(`   Customer: ${order.customerName}`);
+      console.log(`   Type: ${order.cylinderType}, Qty: ${order.quantity}`);
+      console.log(`   Total: ₨${order.totalPrice}`);
     } catch (dbError) {
       // #region agent log
       try {
-        fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:95',message:'Database insert failed',data:{error:dbError.message,stack:dbError.stack,name:dbError.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})+'\n');
+        fs.appendFileSync(logPath, JSON.stringify({
+          location: 'order.controller.js:100',
+          message: 'Database insert failed',
+          data: {
+            error: dbError.message,
+            stack: dbError.stack,
+            name: dbError.name,
+            orderData: orderData
+          },
+          timestamp: Date.now()
+        }) + '\n');
       } catch(e) {}
       // #endregion
+      console.error('❌ Database error creating order:', dbError);
       throw dbError;
     }
 
-    // Return success response
+    // Return success response with full order data
     // #region agent log
     try {
       fs.appendFileSync(logPath, JSON.stringify({location:'order.controller.js:100',message:'Sending success response',data:{orderId:order.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})+'\n');
     } catch(e) {}
     // #endregion
+    
+    // Safely parse float values with fallbacks
+    const pricePerCylinder = parseFloat(order.pricePerCylinder) || 0;
+    const subtotal = parseFloat(order.subtotal) || 0;
+    const discount = parseFloat(order.discount) || 0;
+    const totalPrice = parseFloat(order.totalPrice) || 0;
+    
+    // Safely handle timestamps
+    const createdAt = order.createdAt && order.createdAt.toISOString 
+      ? order.createdAt.toISOString() 
+      : new Date().toISOString();
+    
     return res.status(201).json({
       success: true,
-      orderId: order.id,
+      data: {
+        orderId: order.id,
+        pricePerCylinder,
+        subtotal,
+        discount,
+        totalPrice,
+        couponCode: order.couponCode || null,
+        status: order.status || 'pending',
+        createdAt
+      }
     });
   } catch (error) {
     // #region agent log
@@ -184,10 +228,61 @@ const createOrder = async (req, res, next) => {
 };
 
 /**
- * Get order by ID (for future use, not implemented in this phase)
+ * Get order by ID
+ * GET /api/orders/:id
  */
 const getOrderById = async (req, res, next) => {
-  return res.status(501).json({ error: 'Not implemented' });
+  try {
+    const { id } = req.params;
+    
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid order ID'
+      });
+    }
+    
+    const order = await Order.findByPk(id);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+    
+    // Safely parse float values
+    const pricePerCylinder = parseFloat(order.pricePerCylinder) || 0;
+    const subtotal = parseFloat(order.subtotal) || 0;
+    const discount = parseFloat(order.discount) || 0;
+    const totalPrice = parseFloat(order.totalPrice) || 0;
+    
+    // Safely handle createdAt
+    const createdAt = order.createdAt && order.createdAt.toISOString 
+      ? order.createdAt.toISOString() 
+      : new Date().toISOString();
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderId: order.id,
+        customerName: order.customerName,
+        phone: order.phone.toString(),
+        address: order.address,
+        cylinderType: order.cylinderType,
+        quantity: order.quantity,
+        pricePerCylinder,
+        subtotal,
+        discount,
+        totalPrice,
+        couponCode: order.couponCode || null,
+        status: order.status || 'pending',
+        createdAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {

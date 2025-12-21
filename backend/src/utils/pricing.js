@@ -10,19 +10,39 @@ const CouponUsage = require("../models/couponUsage.model");
  * @returns {Promise<Object>} - { pricePerCylinder, subtotal, discount, total }
  */
 async function calculateOrderTotal(cylinderType, quantity, couponCode = null) {
-  // Fetch product price from database
-  const product = await Product.findOne({
-    where: {
-      type: cylinderType, // 'Domestic' or 'Commercial'
-      isActive: true,
-    },
-  });
+  // Default prices (fallback if products table doesn't exist)
+  const defaultPrices = {
+    'Domestic': 2500.00,
+    'Commercial': 3000.00
+  };
+  
+  let pricePerCylinder;
+  
+  // Try to fetch product price from database
+  try {
+    const product = await Product.findOne({
+      where: {
+        category: cylinderType, // 'Domestic' or 'Commercial'
+      },
+    });
 
-  if (!product) {
-    throw new Error(`Product not found for type: ${cylinderType}`);
+    if (product && product.price) {
+      pricePerCylinder = parseFloat(product.price);
+    } else {
+      // Use default price if product not found
+      pricePerCylinder = defaultPrices[cylinderType] || 2500.00;
+      console.log(`⚠️  Product not found in database for category: ${cylinderType}, using default price: ${pricePerCylinder}`);
+    }
+  } catch (dbError) {
+    // If products table doesn't exist, use default prices
+    pricePerCylinder = defaultPrices[cylinderType] || 2500.00;
+    console.log(`⚠️  Products table error, using default price for category ${cylinderType}: ${pricePerCylinder}`);
+  }
+  
+  if (!pricePerCylinder || pricePerCylinder <= 0) {
+    throw new Error(`Invalid price for cylinder category: ${cylinderType}`);
   }
 
-  const pricePerCylinder = parseFloat(product.price);
   const subtotal = Math.round(pricePerCylinder * quantity * 100) / 100;
 
   // Apply coupon if provided
@@ -37,17 +57,23 @@ async function calculateOrderTotal(cylinderType, quantity, couponCode = null) {
     });
 
     if (coupon) {
+      // Validate coupon discount value
+      const discountValue = parseFloat(coupon.discountValue);
+      if (isNaN(discountValue) || discountValue <= 0) {
+        throw new Error('Invalid coupon discount value');
+      }
+      
       couponDetails = {
         code: coupon.code,
         discountType: coupon.discountType,
-        discountValue: parseFloat(coupon.discountValue),
+        discountValue: discountValue,
       };
 
       // Calculate discount based on coupon type
       if (coupon.discountType === "percentage") {
-        discount = Math.round((subtotal * parseFloat(coupon.discountValue)) / 100 * 100) / 100;
+        discount = Math.round((subtotal * discountValue) / 100 * 100) / 100;
       } else if (coupon.discountType === "flat") {
-        discount = Math.min(subtotal, parseFloat(coupon.discountValue));
+        discount = Math.min(subtotal, discountValue);
       }
     }
   }

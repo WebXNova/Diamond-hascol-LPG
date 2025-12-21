@@ -35,7 +35,7 @@ async function fetchMessages() {
     
     const data = await response.json();
     
-    if (data.success && data.data) {
+    if (data.success && Array.isArray(data.data)) {
       currentMessages = data.data;
       return currentMessages;
     } else {
@@ -63,7 +63,6 @@ function filterMessages() {
   // Sort by date (newest first)
   filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  currentMessages = filtered;
   return filtered;
 }
 
@@ -72,7 +71,10 @@ function filterMessages() {
  */
 function renderMessages() {
   const messagesContainer = document.getElementById('messages-list');
-  if (!messagesContainer) return;
+  if (!messagesContainer) {
+    console.error('Messages container element not found: messages-list');
+    return;
+  }
   
   const filtered = filterMessages();
 

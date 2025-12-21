@@ -1266,6 +1266,9 @@
         </div>
     </div>
 
+    <!-- Keyboard Event Safety Wrapper - Must load first to fix page-events.js errors -->
+    <script src="./js/keyboard-safety.js"></script>
+    <script src="./js/page-events.js"></script>
     <script type="module" src="/src/order-ui/main.tsx"></script>
     <script src="./js/mobile-menu.js"></script>
     <script src="./js/analytics.js"></script>

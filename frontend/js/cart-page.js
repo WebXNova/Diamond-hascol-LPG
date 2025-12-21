@@ -104,13 +104,12 @@
 
     // Add delete button handler
     const deleteBtn = card.querySelector('.cart-order-card__delete');
-    if (deleteBtn && window.OrderStorage) {
+    if (deleteBtn) {
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this order?')) {
-          window.OrderStorage.deleteOrder(order.id);
-          loadOrders();
-        }
+        // Note: Order deletion should be handled via backend API
+        // For now, this is UI-only functionality
+        console.log('Order deletion should be handled via backend API');
       });
     }
 
@@ -118,12 +117,9 @@
   };
 
   const loadOrders = () => {
-    if (!window.OrderStorage) {
-      console.error('OrderStorage not available');
-      return;
-    }
-
-    const orders = window.OrderStorage.getAllOrders();
+    // Note: Orders should be loaded from backend API, not localStorage
+    // For now, using empty array - this should be replaced with API call
+    const orders = [];
 
     // Update cart indicator
     if (typeof window.setCartIndicator === 'function') {
@@ -192,25 +188,13 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       handleHashChange();
-      // Initial load check for orders
-      if (window.OrderStorage) {
-        const orderCount = window.OrderStorage.getOrderCount();
-        const miniCartBtn = document.getElementById('order-mini-cart');
-        if (miniCartBtn && orderCount > 0) {
-          miniCartBtn.classList.remove('is-hidden');
-        }
-      }
+      // Note: Order count should come from backend API
+      // For now, cart indicator is managed by CartManager (UI-only)
     });
   } else {
     handleHashChange();
-    // Initial load check for orders
-    if (window.OrderStorage) {
-      const orderCount = window.OrderStorage.getOrderCount();
-      const miniCartBtn = document.getElementById('order-mini-cart');
-      if (miniCartBtn && orderCount > 0) {
-        miniCartBtn.classList.remove('is-hidden');
-      }
-    }
+    // Note: Order count should come from backend API
+    // For now, cart indicator is managed by CartManager (UI-only)
   }
 
   window.addEventListener('hashchange', handleHashChange);

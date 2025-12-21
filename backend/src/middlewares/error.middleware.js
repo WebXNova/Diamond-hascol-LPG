@@ -1,6 +1,7 @@
 /**
  * Centralized error handling middleware
  * Handles validation errors, database errors, and unknown errors
+ * All errors follow standardized format: { success: false, error: "message" }
  */
 
 const errorMiddleware = (err, req, res, next) => {
@@ -10,6 +11,7 @@ const errorMiddleware = (err, req, res, next) => {
   // Validation errors (from express-validator or custom validation)
   if (err.name === 'ValidationError' || err.status === 400) {
     return res.status(400).json({
+      success: false,
       error: err.message || 'Validation error',
     });
   }
@@ -18,6 +20,7 @@ const errorMiddleware = (err, req, res, next) => {
   if (err.name === 'SequelizeValidationError') {
     const messages = err.errors.map(e => e.message).join(', ');
     return res.status(400).json({
+      success: false,
       error: messages || 'Validation error',
     });
   }
@@ -25,6 +28,7 @@ const errorMiddleware = (err, req, res, next) => {
   // Sequelize database errors
   if (err.name === 'SequelizeDatabaseError' || err.name === 'SequelizeUniqueConstraintError') {
     return res.status(500).json({
+      success: false,
       error: 'Database error occurred',
     });
   }
@@ -32,12 +36,14 @@ const errorMiddleware = (err, req, res, next) => {
   // Custom error with status code
   if (err.status) {
     return res.status(err.status).json({
+      success: false,
       error: err.message || 'An error occurred',
     });
   }
 
   // Unknown errors
   return res.status(500).json({
+    success: false,
     error: err.message || 'Internal server error',
   });
 };

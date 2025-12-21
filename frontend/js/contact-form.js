@@ -117,8 +117,8 @@
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ success: false, error: 'Failed to send message' }));
+        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();

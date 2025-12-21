@@ -26,14 +26,20 @@
   const isOpen = () => layer.classList.contains('is-open');
 
   const getFocusableEls = () => {
-    const nodes = Array.from(dialog.querySelectorAll(focusableSelector));
-    return nodes.filter((el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      if (el.hasAttribute('disabled')) return false;
-      if (el.getAttribute('aria-hidden') === 'true') return false;
-      const style = window.getComputedStyle(el);
-      return style.visibility !== 'hidden' && style.display !== 'none';
-    });
+    if (!dialog) return [];
+    try {
+      const nodes = Array.from(dialog.querySelectorAll(focusableSelector));
+      return nodes.filter((el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        if (el.hasAttribute('disabled')) return false;
+        if (el.getAttribute('aria-hidden') === 'true') return false;
+        const style = window.getComputedStyle(el);
+        return style.visibility !== 'hidden' && style.display !== 'none';
+      });
+    } catch (e) {
+      console.warn('Error getting focusable elements:', e);
+      return [];
+    }
   };
 
   const trapTabKey = (event) => {
@@ -118,7 +124,7 @@
 })();
 
 // Order form (client-side only). Does not modify modal open/close/animation behavior.
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
   const form = document.getElementById('order-cylinder-form');
@@ -152,8 +158,24 @@
   const finalTotalEl = document.getElementById('order-final-total');
   const priceMotionEl = document.getElementById('order-price-motion');
 
-  const typeCards = Array.from(document.querySelectorAll('[data-cylinder-card]'));
-  const typeRadios = Array.from(form.querySelectorAll('input[name="cylinderType"]'));
+  const typeCards = (() => {
+    try {
+      const nodes = document.querySelectorAll('[data-cylinder-card]');
+      return nodes ? Array.from(nodes) : [];
+    } catch (e) {
+      console.warn('Error querying type cards:', e);
+      return [];
+    }
+  })();
+  const typeRadios = (() => {
+    try {
+      const nodes = form.querySelectorAll('input[name="cylinderType"]');
+      return nodes ? Array.from(nodes) : [];
+    } catch (e) {
+      console.warn('Error querying type radios:', e);
+      return [];
+    }
+  })();
 
   if (
     !nameEl ||
@@ -292,14 +314,20 @@
   ].join(',');
 
   const getFocusableEls = (rootEl) => {
-    const nodes = Array.from(rootEl.querySelectorAll(focusableSelector));
-    return nodes.filter((el) => {
-      if (!(el instanceof HTMLElement)) return false;
-      if (el.hasAttribute('disabled')) return false;
-      if (el.getAttribute('aria-hidden') === 'true') return false;
-      const style = window.getComputedStyle(el);
-      return style.visibility !== 'hidden' && style.display !== 'none';
-    });
+    if (!rootEl) return [];
+    try {
+      const nodes = Array.from(rootEl.querySelectorAll(focusableSelector));
+      return nodes.filter((el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        if (el.hasAttribute('disabled')) return false;
+        if (el.getAttribute('aria-hidden') === 'true') return false;
+        const style = window.getComputedStyle(el);
+        return style.visibility !== 'hidden' && style.display !== 'none';
+      });
+    } catch (e) {
+      console.warn('Error getting focusable elements:', e);
+      return [];
+    }
   };
 
   const setCartIndicator = (active) => {
@@ -309,13 +337,11 @@
     const miniCartDot = miniCartBtn ? miniCartBtn.querySelector('.order-mini-cart__dot') : null;
     if (miniCartDot) miniCartDot.classList.toggle('is-active', !!active);
     
-    // Show/hide mini cart button on mobile based on orders
-    if (miniCartBtn && window.OrderStorage) {
-      const orderCount = window.OrderStorage.getOrderCount();
-      if (orderCount > 0) {
+    // Show/hide mini cart button on mobile based on active indicator
+    if (miniCartBtn) {
+      if (active) {
         miniCartBtn.classList.remove('is-hidden');
-      } else if (!active) {
-        // Only hide if no active indicator and no orders
+      } else {
         miniCartBtn.classList.add('is-hidden');
       }
     }
@@ -652,10 +678,15 @@
   const renderCheckout = (order, snapshot) => {
     if (!hasCheckoutUI) return;
 
-    checkoutOrderIdEl.textContent = order.orderId;
-    checkoutStatusEl.textContent = order.status.charAt(0).toUpperCase() + order.status.slice(1);
-    checkoutCreatedAtEl.textContent = new Date(order.createdAt).toLocaleString();
-    checkoutEtaEl.textContent = order.estimatedDelivery;
+    checkoutOrderIdEl.textContent = order.orderId || 'N/A';
+    checkoutStatusEl.textContent = order.status 
+      ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
+      : 'Unknown';
+    checkoutCreatedAtEl.textContent = order.createdAt 
+      ? new Date(order.createdAt).toLocaleString() 
+      : new Date().toLocaleString();
+    // ETA is not provided by backend, use default
+    checkoutEtaEl.textContent = order.estimatedDelivery || '+24 hours';
 
     const typeLabel = snapshot.type === 'commercial' ? 'Commercial LPG Cylinder' : 'Domestic LPG Cylinder';
     checkoutItemNameEl.textContent = typeLabel;
@@ -711,9 +742,12 @@
 
   const renderOrderCard = (order, snapshot) => {
     if (!hasSidecardUI) return;
-    orderIdEl.textContent = order.orderId;
-    orderCreatedAtEl.textContent = new Date(order.createdAt).toLocaleString();
-    orderEtaEl.textContent = order.estimatedDelivery;
+    orderIdEl.textContent = order.orderId || 'N/A';
+    orderCreatedAtEl.textContent = order.createdAt 
+      ? new Date(order.createdAt).toLocaleString() 
+      : new Date().toLocaleString();
+    // ETA is not provided by backend, use default
+    orderEtaEl.textContent = order.estimatedDelivery || '+24 hours';
 
     const typeLabel = snapshot.type === 'commercial' ? 'Commercial' : 'Domestic';
     orderCylinderEl.textContent = typeLabel;
@@ -741,7 +775,7 @@
       proceedCheckoutBtn.disabled = false;
     }
 
-    setStatus(order.status);
+    setStatus(order.status || 'pending');
   };
 
   const renderQtyWarning = () => {
@@ -757,9 +791,10 @@
 
     const phone = sanitizePhone(phoneEl.value);
     phoneEl.value = phone;
-    const digitsCount = phone.replace(/[^\d]/g, '').length;
+    const phoneStr = phone || '';
+    const digitsCount = phoneStr.replace(/[^\d]/g, '').length;
     if (!phone) errors.push({ el: phoneEl, err: errPhoneEl, msg: 'Phone number is required.' });
-    else if (!/^\+?\d+$/.test(phone)) errors.push({ el: phoneEl, err: errPhoneEl, msg: 'Use numbers only (optional “+” at start).' });
+    else if (!/^\+?\d+$/.test(phone)) errors.push({ el: phoneEl, err: errPhoneEl, msg: 'Use numbers only (optional "+" at start).' });
     else if (digitsCount < 7) errors.push({ el: phoneEl, err: errPhoneEl, msg: 'Phone number looks too short.' });
 
     const address = addressEl.value.trim();
@@ -789,9 +824,8 @@
     return errors;
   };
 
-  // Coupon validation removed - backend handles coupon validation
-  // This function just stores the coupon code for submission
-  const applyCoupon = () => {
+  // Coupon validation via API
+  const applyCoupon = async () => {
     const code = couponEl.value.trim().toUpperCase();
     couponEl.value = code;
 
@@ -803,9 +837,90 @@
       return;
     }
 
-    // Store coupon code - validation happens on backend
-    couponState = { status: 'applied', code };
-    setPlainError(errCouponEl, '');
+    // Get selected type and quantity for validation
+    const selectedType = getSelectedType();
+    const qty = getQty();
+    
+    if (!selectedType) {
+      setPlainError(errCouponEl, 'Please select a cylinder type first.');
+      return;
+    }
+
+    // Fetch product price from API based on cylinder type
+    try {
+      couponState = { status: 'checking', code };
+      setPlainError(errCouponEl, '');
+      
+      // Normalize cylinder type to match backend format ('Domestic' or 'Commercial')
+      const normalizedType = selectedType.charAt(0).toUpperCase() + selectedType.slice(1).toLowerCase();
+      const cylinderTypeForApi = normalizedType === 'Commercial' ? 'Commercial' : 'Domestic';
+      
+      // Fetch product to get price
+      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('products') 
+        : 'http://localhost:5000/api/products';
+      
+      // Try to get product by type (assuming products can be queried by type)
+      // For now, we'll fetch all products and find the matching one
+      const productsResponse = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!productsResponse.ok) {
+        throw new Error('Failed to fetch product prices');
+      }
+
+      const productsData = await productsResponse.json();
+      if (!productsData.success || !Array.isArray(productsData.data)) {
+        throw new Error('Invalid products data');
+      }
+
+      // Find product matching the selected type
+      const product = productsData.data.find(p => 
+        p.type && p.type.toLowerCase() === cylinderTypeForApi.toLowerCase() && p.isActive
+      );
+
+      if (!product) {
+        throw new Error('Product not found for selected type');
+      }
+
+      const subtotal = parseFloat(product.price) * qty;
+
+      // Validate coupon with API
+      const couponApiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('coupons') + '/validate'
+        : 'http://localhost:5000/api/coupons/validate';
+      
+      const couponResponse = await fetch(couponApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code,
+          subtotal: subtotal,
+          cylinderType: cylinderTypeForApi,
+        }),
+      });
+
+      const couponData = await couponResponse.json();
+
+      if (couponResponse.ok && couponData.success && couponData.data) {
+        couponState = { status: 'applied', code: couponData.data.code };
+        setPlainError(errCouponEl, '');
+      } else {
+        couponState = { status: 'idle', code: '' };
+        setPlainError(errCouponEl, couponData.error || 'Invalid coupon code.');
+      }
+    } catch (error) {
+      console.error('Error validating coupon:', error);
+      couponState = { status: 'idle', code: '' };
+      setPlainError(errCouponEl, 'Failed to validate coupon. Please try again.');
+    }
+
     renderPrice();
   };
 
@@ -830,25 +945,43 @@
 
   const submitOrder = async (payload) => {
     // Normalize cylinderType to match backend enum ('Domestic' or 'Commercial')
-    const type = payload.cylinderType 
-      ? payload.cylinderType.charAt(0).toUpperCase() + payload.cylinderType.slice(1).toLowerCase()
-      : '';
+    let type = '';
+    if (payload.cylinderType) {
+      const lower = payload.cylinderType.toLowerCase();
+      if (lower === 'domestic' || lower === 'commercial') {
+        type = lower.charAt(0).toUpperCase() + lower.slice(1);
+      } else {
+        type = payload.cylinderType.charAt(0).toUpperCase() + payload.cylinderType.slice(1).toLowerCase();
+      }
+    }
     
-    // Send ONLY user input data (camelCase) - backend calculates prices
+    // Ensure quantity is a number
+    const quantity = typeof payload.quantity === 'number' 
+      ? payload.quantity 
+      : parseInt(payload.quantity, 10);
+    
+    // Send ONLY user input data - backend calculates prices
+    // Note: Simple endpoint uses 'name' instead of 'customerName'
     const requestBody = {
-      customerName: payload.customerName,
+      name: payload.customerName, // Map to 'name' for simple endpoint
       phone: payload.phone,
       address: payload.address,
       cylinderType: type, // 'Domestic' or 'Commercial'
-      quantity: payload.quantity,
-      couponCode: payload.coupon || null, // Optional
+      quantity: quantity,
+      couponCode: payload.coupon && payload.coupon.trim() ? payload.coupon.trim().toUpperCase() : undefined,
     };
+    
+    // Log request for debugging
+    console.log('📤 Sending order request:', requestBody);
     
     try {
       // Use centralized API config if available, otherwise use default
+      // Note: Using /api/order (simple endpoint) for consistency with React component
       const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
-        ? window.getApiUrl('orders') 
-        : 'http://localhost:5000/api/orders';
+        ? window.getApiUrl('order') 
+        : 'http://localhost:5000/api/order';
+      
+      console.log('🌐 API URL:', apiUrl);
       
       const res = await fetch(apiUrl, {
         method: 'POST',
@@ -856,19 +989,56 @@
         body: JSON.stringify(requestBody),
       });
       
+      console.log('📥 Response status:', res.status, res.statusText);
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Failed to create order' }));
-        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        let errorData;
+        try {
+          errorData = await res.json();
+          console.error('❌ API Error Response:', errorData);
+        } catch (jsonError) {
+          const text = await res.text().catch(() => 'No error details');
+          console.error('❌ API Error (non-JSON):', text);
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        throw new Error(errorData.error || errorData.message || `HTTP ${res.status}: ${res.statusText}`);
       }
       
-      const data = await res.json();
-      return { 
-        orderId: data.orderId, 
-        status: 'pending', // Backend sets status to 'pending'
-        createdAt: new Date() 
+      let data;
+      try {
+        data = await res.json();
+        console.log('✅ API Success Response:', data);
+      } catch (jsonError) {
+        console.error('❌ JSON Parse Error:', jsonError);
+        throw new Error('Invalid JSON response from server');
+      }
+      
+      if (!data.success || !data.data) {
+        console.error('❌ Invalid response structure:', data);
+        throw new Error(data.error || 'Invalid response from server');
+      }
+      
+      // Validate required fields with fallbacks
+      if (!data.data.orderId) {
+        console.error('❌ Missing orderId in response:', data);
+        throw new Error('Invalid response: missing order ID');
+      }
+      
+      console.log('✅ Order created successfully:', data.data.orderId);
+      
+      return {
+        orderId: data.data.orderId,
+        status: data.data.status || 'pending',
+        createdAt: data.data.createdAt ? new Date(data.data.createdAt) : new Date(),
+        pricePerCylinder: data.data.pricePerCylinder || 0,
+        subtotal: data.data.subtotal || 0,
+        discount: data.data.discount || 0,
+        totalPrice: data.data.totalPrice || 0,
+        couponCode: data.data.couponCode || null
       };
     } catch (error) {
-      console.error('Order submission failed:', error);
+      console.error('❌ Order submission failed:', error);
+      console.error('   Request was:', requestBody);
       throw error;
     }
   };
@@ -896,54 +1066,64 @@
       sidecardErrEl.textContent = '';
     }
 
+    // Get selected type and ensure it's valid
+    const selectedType = getSelectedType();
+    if (!selectedType) {
+      setPlainError(errTypeEl, 'Please select a cylinder type.');
+      submitState.status = 'error';
+      setControlsDisabled(false);
+      setSubmitUI('idle', 'Please select a cylinder type.');
+      return;
+    }
+    
     const payload = {
       customerName: nameEl.value.trim(),
       phone: phoneEl.value.trim(),
       address: addressEl.value.trim(),
-      cylinderType: getSelectedType(),
-      quantity: getQty(),
-      coupon: couponEl.value.trim().toUpperCase() || null,
+      cylinderType: selectedType, // Will be normalized in submitOrder
+      quantity: getQty(), // Already returns a number
+      coupon: couponEl.value.trim() || null,
     };
+    
+    // Validate payload before sending
+    if (!payload.customerName || !payload.phone || !payload.address || !payload.cylinderType || !payload.quantity) {
+      console.error('❌ Invalid payload:', payload);
+      setControlsDisabled(false);
+      setSubmitUI('idle', 'Please fill all required fields.');
+      return;
+    }
+    
+    console.log('📋 Order payload prepared:', payload);
     submitState.lastPayload = payload;
 
     try {
       const res = await submitOrder(payload);
-      const snapshot = getSubmissionSnapshot();
 
       submitState.status = 'success';
       submitState.lastOrder = res;
-      submitState.lastSnapshot = snapshot;
-
-      localStorage.setItem('userOrder', JSON.stringify({
-        orderId: res.orderId,
-        status: res.status,
-        createdAt: res.createdAt.toISOString(),
-      }));
-
-      if (window.OrderStorage) {
-        const totals = snapshot;
-        window.OrderStorage.saveOrder({
-          productId: 'manual',
-          productName: `${snapshot.type === 'commercial' ? 'Commercial' : 'Domestic'} LPG Cylinder`,
-          cylinderType: snapshot.type,
-          quantity: snapshot.qty,
-          unitPrice: snapshot.unit,
-          subtotal: snapshot.subtotal,
-          discount: snapshot.discount,
-          finalPrice: snapshot.finalTotal,
-          couponCode: snapshot.couponCode || null,
-          customerName: payload.customerName,
-          phone: payload.phone,
-          address: payload.address
-        });
-      }
+      // Store order data from backend response (no snapshot needed)
+      // Calculate discount percentage safely
+      const discountPct = (res.subtotal > 0 && res.discount > 0) 
+        ? Math.round((res.discount / res.subtotal) * 100) 
+        : 0;
+      
+      submitState.lastSnapshot = {
+        type: payload.cylinderType && payload.cylinderType.toLowerCase() === 'commercial' ? 'commercial' : 'domestic',
+        qty: payload.quantity || 0,
+        unit: res.pricePerCylinder || 0,
+        subtotal: res.subtotal || 0,
+        discount: res.discount || 0,
+        discountPct: discountPct,
+        finalTotal: res.totalPrice || 0,
+        couponCode: res.couponCode || ''
+      };
 
       // Keep form disabled to prevent double submission.
       setSubmitUI('idle', '');
       submitBtn.disabled = true;
 
       if (hasSidecardUI) {
-        renderOrderCard(res, snapshot);
+        renderOrderCard(res, submitState.lastSnapshot);
         openSidecard();
         startStatusSimulation();
         showToast('Order confirmed. Pay on delivery.', 'View Order', () => {
@@ -1038,16 +1218,8 @@
   renderQtyWarning();
   renderPrice();
 
-  // Initialize cart indicator based on stored orders
-  if (hasSidecardUI && window.OrderStorage) {
-    const orderCount = window.OrderStorage.getOrderCount();
-    if (orderCount > 0) {
-      setCartIndicator(true);
-      if (miniCartBtn) {
-        miniCartBtn.classList.remove('is-hidden');
-      }
-    }
-  }
+  // Cart indicator will be set when a new order is submitted
+  // No localStorage initialization needed
 
   // Toast + sidecard events
   if (hasSidecardUI) {
@@ -1177,7 +1349,7 @@
       alert('Order placement is disabled in this demo. Payment will be collected on delivery.');
     });
   }
-})();
+});
 
 // Site-wide Notification Banner (Centered, Auto-hide)
 (() => {

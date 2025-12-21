@@ -6,11 +6,15 @@
 const API_CONFIG = {
   baseURL: 'http://localhost:5000',
   endpoints: {
+    order: '/api/order',
     orders: '/api/orders',
+    coupons: '/api/coupons',
+    products: '/api/products',
     contact: '/api/contact',
     adminOrders: '/api/admin/orders',
     adminMessages: '/api/admin/messages',
     adminCoupons: '/api/admin/coupons',
+    adminProducts: '/api/admin/products',
   },
 };
 

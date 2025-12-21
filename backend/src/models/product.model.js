@@ -13,19 +13,29 @@ const Product = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    type: {
+    category: {
       type: DataTypes.ENUM("Domestic", "Commercial"),
       allowNull: false,
+      field: "category",
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    isActive: {
+    imageUrl: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      field: "image_url",
+    },
+    inStock: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
-      field: "is_active",
+      field: "in_stock",
     },
   },
   {

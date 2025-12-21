@@ -2,61 +2,10 @@
   'use strict';
 
   // ============================================
-  // MOCK PRODUCT DATA
+  // PRODUCT DATA - Fetched from API
   // ============================================
-  const PRODUCTS = {
-    domestic: {
-      id: 'domestic',
-      name: 'Domestic LPG Cylinder',
-      type: 'domestic',
-      description: 'Perfect for home use - safe, reliable, and efficient. Our domestic LPG cylinders are designed for everyday household cooking and heating needs. These cylinders are manufactured with the highest safety standards and are ISI certified, ensuring you get a quality product that you can trust for your family\'s daily cooking requirements. With a standard 45kg capacity, these cylinders provide long-lasting fuel supply while being easy to handle and store in your home.',
-      image: './public/domesticcylinder.png',
-      price: 3200,
-      specs: [
-        'Standard 45kg capacity - ideal for household use',
-        'ISI certified and safety tested - meets all quality standards',
-        'Long-lasting and efficient - optimized fuel consumption',
-        'Easy to handle and store - compact design for home storage',
-        'Compatible with standard regulators - universal compatibility',
-        'Durable construction - built to last for years',
-        'Safety valve included - ensures safe operation'
-      ]
-    },
-    commercial: {
-      id: 'commercial',
-      name: 'Commercial LPG Cylinder',
-      type: 'commercial',
-      description: 'Ideal for businesses and commercial establishments. High-capacity cylinders designed for restaurants, hotels, and industrial use. These commercial-grade LPG cylinders are built to handle heavy usage and provide reliable fuel supply for your business operations. With superior construction and safety features, these cylinders are perfect for establishments that require consistent and large volumes of LPG for their daily operations.',
-      image: './public/commercilcylinder.png',
-      price: 12800,
-      specs: [
-        'High-capacity design for commercial use - meets business demands',
-        'ISI certified and safety tested - professional grade quality',
-        'Durable construction for heavy usage - built for commercial operations',
-        'Suitable for restaurants and hotels - perfect for food service industry',
-        'Professional grade quality - reliable performance',
-        'Enhanced safety features - meets commercial safety standards',
-        'Long service life - cost-effective for business operations'
-      ]
-    },
-    refilling: {
-      id: 'refilling',
-      name: 'Gas Cylinder Refilling',
-      type: 'refilling',
-      description: 'Our gas cylinder refilling service is conducted with the highest safety standards and professional expertise. We use proper equipment and trained staff to ensure every refill is done safely and efficiently. Trust us for professional cylinder refilling that prioritizes your safety and the quality of service you deserve. Our state-of-the-art refilling equipment and highly trained certified staff ensure that every refill meets quality assurance checks and complies with all safety regulations.',
-      image: './public/diamondhascolbannerimage.jpg',
-      price: 3200,
-      specs: [
-        'Safety-focused refilling process - your safety is our priority',
-        'State-of-the-art refilling equipment - modern and reliable',
-        'Highly trained and certified staff - professional expertise',
-        'Quality assurance checks - every refill is verified',
-        'Compliance with safety regulations - meets all standards',
-        'Quick turnaround time - efficient service',
-        'Available for all cylinder types - domestic and commercial'
-      ]
-    }
-  };
+  // Product data is now fetched from backend API
+  // See fetchProduct function below
 
   // ============================================
   // GLOBAL CART STATE MANAGER
@@ -177,12 +126,81 @@
   })();
 
   // ============================================
-  // MOCK API FUNCTIONS
+  // API FUNCTIONS
   // ============================================
   const fetchProduct = async (id) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return PRODUCTS[id] || null;
+    try {
+      // Use centralized API config if available, otherwise use default
+      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('products') 
+        : 'http://localhost:5000/api/products';
+      
+      const response = await fetch(`${apiUrl}/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch product:', response.status, response.statusText);
+        return null;
+      }
+
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        console.error('Invalid product response:', result);
+        return null;
+      }
+
+      // Transform backend product to match frontend format
+      const product = result.data;
+      
+      // Default descriptions and specs based on product type
+      const defaultData = {
+        domestic: {
+          description: 'Perfect for home use - safe, reliable, and efficient. Our domestic LPG cylinders are designed for everyday household cooking and heating needs. These cylinders are manufactured with the highest safety standards and are ISI certified, ensuring you get a quality product that you can trust for your family\'s daily cooking requirements. With a standard 45kg capacity, these cylinders provide long-lasting fuel supply while being easy to handle and store in your home.',
+          specs: [
+            'Standard 45kg capacity - ideal for household use',
+            'ISI certified and safety tested - meets all quality standards',
+            'Long-lasting and efficient - optimized fuel consumption',
+            'Easy to handle and store - compact design for home storage',
+            'Compatible with standard regulators - universal compatibility',
+            'Durable construction - built to last for years',
+            'Safety valve included - ensures safe operation'
+          ]
+        },
+        commercial: {
+          description: 'Ideal for businesses and commercial establishments. High-capacity cylinders designed for restaurants, hotels, and industrial use. These commercial-grade LPG cylinders are built to handle heavy usage and provide reliable fuel supply for your business operations. With superior construction and safety features, these cylinders are perfect for establishments that require consistent and large volumes of LPG for their daily operations.',
+          specs: [
+            'High-capacity design for commercial use - meets business demands',
+            'ISI certified and safety tested - professional grade quality',
+            'Durable construction for heavy usage - built for commercial operations',
+            'Suitable for restaurants and hotels - perfect for food service industry',
+            'Professional grade quality - reliable performance',
+            'Enhanced safety features - meets commercial safety standards',
+            'Long service life - cost-effective for business operations'
+          ]
+        }
+      };
+      
+      const typeKey = product.type?.toLowerCase() || id.toLowerCase();
+      const defaults = defaultData[typeKey] || { description: '', specs: [] };
+      
+      return {
+        id: product.id || id,
+        name: product.name || 'Product',
+        type: product.type?.toLowerCase() || id,
+        description: defaults.description,
+        image: product.type === 'Domestic' ? './public/domesticcylinder.png' : './public/commercilcylinder.png',
+        price: product.price || 0,
+        specs: defaults.specs
+      };
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      return null;
+    }
   };
 
   const mockAddToCart = async (payload) => {
@@ -262,23 +280,24 @@
 
     // Populate left panel
     if (productDetailImg) {
-      productDetailImg.src = product.image;
-      productDetailImg.alt = product.name;
+      productDetailImg.src = product.image || '';
+      productDetailImg.alt = product.name || 'Product image';
     }
-    if (productDetailTitle) productDetailTitle.textContent = product.name;
+    if (productDetailTitle) productDetailTitle.textContent = product.name || 'Product';
     if (productDetailDescription) {
       // Shortened description for left panel (first 200 characters)
-      const shortDesc = product.description.length > 200 
-        ? product.description.substring(0, 200) + '...'
-        : product.description;
+      const description = product.description || '';
+      const shortDesc = description.length > 200 
+        ? description.substring(0, 200) + '...'
+        : description;
       productDetailDescription.textContent = shortDesc;
     }
     if (productDetailPriceValue) productDetailPriceValue.textContent = formatPKR(product.price);
 
     // Populate order form
-    if (productOrderId) productOrderId.value = product.id;
-    if (productOrderType) productOrderType.value = product.type;
-    if (productOrderName) productOrderName.value = product.name;
+    if (productOrderId) productOrderId.value = product.id || '';
+    if (productOrderType) productOrderType.value = product.type || '';
+    if (productOrderName) productOrderName.value = product.name || '';
     if (productOrderCylinderType) {
       productOrderCylinderType.value = product.type === 'domestic' ? 'domestic' : 'commercial';
     }
@@ -403,7 +422,7 @@
   };
 
   const applyCoupon = async () => {
-    if (!productOrderCoupon || !productOrderCouponApply) return;
+    if (!productOrderCoupon || !productOrderCouponApply || !currentProduct) return;
 
     const code = productOrderCoupon.value.trim().toUpperCase();
     productOrderCoupon.value = code;
@@ -416,24 +435,64 @@
       return;
     }
 
+    // Calculate subtotal for validation
+    const quantity = parseInt(productOrderQuantity?.value || '1', 10);
+    const subtotal = currentProduct.price * quantity;
+    
+    // Get cylinder type (normalize to 'Domestic' or 'Commercial')
+    const cylinderTypeValue = productOrderCylinderType?.value || currentProduct.type || 'domestic';
+    const cylinderType = cylinderTypeValue.charAt(0).toUpperCase() + cylinderTypeValue.slice(1).toLowerCase();
+    const normalizedCylinderType = cylinderType === 'Commercial' ? 'Commercial' : 'Domestic';
+
     couponState = { status: 'checking', code };
     setPlainError(productOrderErrCoupon, '');
     productOrderCouponApply.disabled = true;
     const prevLabel = productOrderCouponApply.textContent;
     productOrderCouponApply.textContent = 'Applying…';
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Use centralized API config if available
+      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('coupons') + '/validate'
+        : 'http://localhost:5000/api/coupons/validate';
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: code,
+          subtotal: subtotal,
+          cylinderType: normalizedCylinderType,
+        }),
+      });
 
-    if (code === 'WELCOME10') {
-      couponState = { status: 'applied', code, kind: 'percent', value: 10 };
-      setPlainError(productOrderErrCoupon, '');
-    } else if (code === 'FLAT500') {
-      couponState = { status: 'applied', code, kind: 'flat', value: 500 };
-      setPlainError(productOrderErrCoupon, '');
-    } else {
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data) {
+        const couponData = data.data;
+        couponState = { 
+          status: 'applied', 
+          code: couponData.code,
+          kind: couponData.kind, // 'percent' or 'flat'
+          value: couponData.kind === 'percent' ? couponData.discountPercent : couponData.discountAmount
+        };
+        setPlainError(productOrderErrCoupon, '');
+        
+        // Show toast for successful coupon application
+        const discountText = couponData.kind === 'percent' 
+          ? `${couponData.discountPercent}% off` 
+          : formatPKR(couponData.discountAmount) + ' off';
+        showToast(`Coupon applied! ${discountText}`, false);
+      } else {
+        couponState = { status: 'invalid', code };
+        setPlainError(productOrderErrCoupon, data.error || 'Invalid coupon code.');
+      }
+    } catch (error) {
+      console.error('Error validating coupon:', error);
       couponState = { status: 'invalid', code };
-      setPlainError(productOrderErrCoupon, 'Invalid coupon code.');
+      setPlainError(productOrderErrCoupon, 'Failed to validate coupon. Please try again.');
     }
 
     productOrderCouponApply.disabled = false;
@@ -445,14 +504,6 @@
     }
 
     updatePriceSummary();
-
-    // Show toast for successful coupon application
-    if (couponState.status === 'applied') {
-      const discountText = couponState.kind === 'percent' 
-        ? `${couponState.value}% off` 
-        : formatPKR(couponState.value) + ' off';
-      showToast(`Coupon applied! ${discountText}`, false);
-    }
   };
 
   const showToast = (message, showViewButton = false) => {
@@ -699,6 +750,5 @@
   // Expose CartManager globally for integration with existing order.js
   window.CartManager = CartManager;
   window.openProductDetail = openProductDetail;
-  window.PRODUCTS = PRODUCTS;
 })();
 

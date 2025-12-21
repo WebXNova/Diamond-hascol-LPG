@@ -22,14 +22,14 @@ const getMessages = async (req, res, next) => {
       order: [['created_at', 'DESC']],
     });
 
-    // Format messages for frontend
+    // Format messages for frontend with safe parsing
     const formattedMessages = messages.map(message => ({
-      id: message.id,
-      name: message.name,
-      phone: message.phone.toString(),
-      message: message.message,
-      isRead: message.isRead,
-      createdAt: message.created_at,
+      id: message.id || 0,
+      name: message.name || '',
+      phone: message.phone ? message.phone.toString() : '',
+      message: message.message || '',
+      isRead: message.isRead || false,
+      createdAt: message.createdAt ? message.createdAt.toISOString() : new Date().toISOString(),
     }));
 
     return res.status(200).json({
@@ -54,6 +54,7 @@ const markAsRead = async (req, res, next) => {
 
     if (!message) {
       return res.status(404).json({
+        success: false,
         error: 'Message not found',
       });
     }
@@ -87,6 +88,7 @@ const deleteMessage = async (req, res, next) => {
 
     if (!message) {
       return res.status(404).json({
+        success: false,
         error: 'Message not found',
       });
     }

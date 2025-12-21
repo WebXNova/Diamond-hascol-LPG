@@ -3,12 +3,13 @@ import styles from './order-ui.module.css';
 import type { CouponResult, CylinderType, OrderConfirmation, OrderDraft, OrderStatus, Pricing } from './types';
 import { useMediaQuery } from './hooks/use-media-query';
 import { clampInt } from './utils/format';
-import { computePricing, mockSubmitOrder, mockValidateCoupon } from './utils/mock-api';
+import { computePricing } from './utils/mock-api';
 import { OrderCylinderPanel } from './ui/order-cylinder-panel';
 import { LeftOrderCard } from './ui/left-order-card';
 import { Toast } from './ui/toast';
 import { OrderForm, type FieldErrors } from './components/order-form';
 import type { CouponUIState } from './components/coupon-input';
+import { createOrder, validateCoupon } from '../services/api';
 
 const INITIAL_DRAFT: OrderDraft = {
   name: '',
@@ -44,6 +45,81 @@ function validateDraft(draft: OrderDraft): { errors: FieldErrors; quantity: numb
 
 function nextStatuses(): OrderStatus[] {
   return ['preparing', 'out_for_delivery', 'delivered'];
+}
+
+function capitalizeCylinderType(type: CylinderType): 'Domestic' | 'Commercial' {
+  return type === 'domestic' ? 'Domestic' : 'Commercial';
+}
+
+async function validateCouponAPI(
+  code: string,
+  subtotal: number,
+  cylinderType: CylinderType
+): Promise<CouponResult> {
+  const result = await validateCoupon({
+    code: code.trim(),
+    subtotal: subtotal,
+    cylinderType: capitalizeCylinderType(cylinderType),
+  });
+
+  if (!result.success || !result.data) {
+    return { ok: false, code: code.trim().toUpperCase(), reason: 'invalid' };
+  }
+
+  const couponData = result.data;
+  return {
+    ok: true,
+    code: couponData.code,
+    kind: couponData.kind,
+    discountPercent: couponData.discountPercent,
+    discountAmount: couponData.discountAmount,
+  };
+}
+
+async function submitOrderToAPI(
+  draft: OrderDraft,
+  cylinderType: CylinderType,
+  quantity: number,
+  couponCode?: string
+): Promise<{ ok: true; data: OrderConfirmation } | { ok: false; message: string }> {
+  const result = await createOrder({
+    name: draft.name.trim(),
+    phone: draft.phone,
+    address: draft.address.trim(),
+    cylinderType: capitalizeCylinderType(cylinderType),
+    quantity: quantity,
+    couponCode: couponCode && couponCode.trim() ? couponCode.trim().toUpperCase() : undefined,
+  });
+
+  if (!result.success || !result.data) {
+    return { ok: false, message: result.error || 'Failed to submit order. Please try again.' };
+  }
+
+  // Transform backend response to frontend OrderConfirmation format
+  const orderData = result.data;
+  const createdAt = orderData.createdAt ? new Date(orderData.createdAt) : new Date();
+  
+  // Use pricing from backend response
+  const pricing: Pricing = {
+    unitPrice: orderData.pricePerCylinder || (cylinderType === 'domestic' ? 2500 : 3000),
+    quantity: quantity,
+    subtotal: orderData.subtotal || (orderData.pricePerCylinder || (cylinderType === 'domestic' ? 2500 : 3000)) * quantity,
+    discountAmount: orderData.discount || 0,
+    total: orderData.totalPrice || (orderData.subtotal || (orderData.pricePerCylinder || (cylinderType === 'domestic' ? 2500 : 3000)) * quantity),
+  };
+
+  const orderConfirmation: OrderConfirmation = {
+    orderId: orderData.orderId?.toString() || `ORD${Date.now()}`,
+    status: (orderData.status || 'confirmed') as OrderStatus,
+    createdAt: createdAt,
+    estimatedDelivery: '+24 hours',
+    cylinderType: cylinderType,
+    quantity: quantity,
+    couponCode: orderData.couponCode || undefined,
+    pricing: pricing,
+  };
+
+  return { ok: true, data: orderConfirmation };
 }
 
 export function OrderExperience(): React.ReactElement {
@@ -126,7 +202,7 @@ export function OrderExperience(): React.ReactElement {
     }
     setCouponState({ status: 'applying' });
 
-    const result = await mockValidateCoupon(code, basePricing);
+    const result = await validateCouponAPI(code, basePricing.subtotal, cylinderType);
     if (result.ok) {
       setCouponState({ status: 'applied', result });
       setErrors((e) => ({ ...e }));
@@ -154,8 +230,8 @@ export function OrderExperience(): React.ReactElement {
 
     setSubmitState({ status: 'submitting' });
 
-    const coupon = couponState.status === 'applied' ? couponState.result : null;
-    const res = await mockSubmitOrder({ draft, cylinderType, quantity: v.quantity, coupon, pricing });
+    const couponCode = couponState.status === 'applied' ? couponState.result?.code : undefined;
+    const res = await submitOrderToAPI(draft, cylinderType, v.quantity, couponCode);
     if (!res.ok) {
       setSubmitState({ status: 'error', message: res.message });
       return;
