@@ -12,11 +12,12 @@ let currentFilters = {
 };
 
 /**
- * Fetch orders from backend API
+ * Fetch order history from backend API (only delivered and cancelled orders)
  */
 async function fetchHistory() {
   try {
-    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    // Use the history endpoint that returns only delivered and cancelled orders
+    const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') + '/history' : 'http://localhost:5000/api/admin/orders/history';
     
     // Build query params
     const params = new URLSearchParams();

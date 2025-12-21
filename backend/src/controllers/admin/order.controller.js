@@ -3,14 +3,24 @@ const Order = require("../../models/order.model");
 /**
  * Get all orders (with optional filtering)
  * GET /api/admin/orders
+ * Note: By default, excludes delivered and cancelled orders (they should be in history)
  */
 const getOrders = async (req, res, next) => {
   try {
     const { status, limit = 100, offset = 0 } = req.query;
 
     // Build where clause
-    const where = {};
-    if (status && status !== 'all') {
+    // Always exclude delivered and cancelled orders from the orders section
+    // They should only appear in the history section
+    const { Op } = require('sequelize');
+    const where = {
+      status: {
+        [Op.notIn]: ['delivered', 'cancelled']
+      }
+    };
+    
+    // If a specific status is requested (and it's not delivered/cancelled), filter by it
+    if (status && status !== 'all' && status !== 'delivered' && status !== 'cancelled') {
       where.status = status;
     }
 

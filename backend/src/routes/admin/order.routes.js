@@ -1,6 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const { getOrders, getOrderById, updateOrderStatus, deleteOrder } = require("../../controllers/admin/order.controller");
+const { getOrderHistory } = require("../../controllers/orderHistory.controller");
+
+// GET /api/admin/orders/history (must be before /:id route)
+router.get("/history", (req, res, next) => {
+  getOrderHistory(req, res, next);
+});
 
 // GET /api/admin/orders
 router.get("/", (req, res, next) => {

@@ -53,3 +53,24 @@ INSERT INTO products (name, category, description, price, in_stock) VALUES
 ('Domestic LPG Cylinder', 'Domestic', 'LPG cylinder for home use', 2500.00, TRUE),
 ('Commercial LPG Cylinder', 'Commercial', 'LPG cylinder for commercial use', 3000.00, TRUE);
 
+
+CREATE TABLE coupon_usage (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  coupon_code VARCHAR(50) NOT NULL,
+  order_id INT NOT NULL,
+  discount_amount DECIMAL(10,2) NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_coupon_usage_coupon (coupon_code),
+  INDEX idx_coupon_usage_order (order_id),
+
+  CONSTRAINT fk_coupon_usage_coupon
+    FOREIGN KEY (coupon_code) REFERENCES coupons(code)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_coupon_usage_order
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+    ON DELETE CASCADE
+);
