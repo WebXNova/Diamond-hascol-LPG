@@ -63,6 +63,13 @@ export function clearSession() {
 }
 
 /**
+ * Logout (alias for clearSession)
+ */
+export function logout() {
+  clearSession();
+}
+
+/**
  * Mock login function
  * In production, this will call: POST /api/admin/auth/login
  * 

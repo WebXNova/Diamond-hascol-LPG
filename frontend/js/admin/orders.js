@@ -52,28 +52,49 @@ function getStatusBadgeClass(status) {
 async function fetchOrders() {
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    console.log('🔄 Fetching orders from:', apiUrl);
+    
     const response = await fetch(apiUrl);
+    console.log('📡 Response status:', response.status, response.statusText);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch orders: ${response.statusText}`);
+      throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
     }
     
     let data;
     try {
       data = await response.json();
+      console.log('✅ Received data:', data);
     } catch (jsonError) {
+      console.error('❌ JSON parse error:', jsonError);
       throw new Error('Invalid JSON response from server');
     }
     
     if (data.success && Array.isArray(data.data)) {
       currentOrders = data.data;
+      console.log(`✅ Loaded ${currentOrders.length} orders into memory`);
       return currentOrders;
     } else {
+      console.error('❌ Invalid response format:', data);
       throw new Error('Invalid response format from server');
     }
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    showNotification('Failed to load orders. Please refresh the page.', 'error');
+    console.error('❌ Error fetching orders:', error);
+    showNotification(`Failed to load orders: ${error.message}`, 'error');
+    // Show error in table too
+    const tableBody = document.getElementById('orders-table-body');
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--color-danger);">
+            Error loading orders: ${error.message}<br/>
+            <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--color-brand); color: white; border: none; border-radius: var(--radius-md); cursor: pointer;">
+              Retry
+            </button>
+          </td>
+        </tr>
+      `;
+    }
     return [];
   }
 }
@@ -128,19 +149,21 @@ function filterOrders() {
  * Render orders table
  */
 function renderOrders() {
+  console.log('🎨 Rendering orders...');
   const tableBody = document.getElementById('orders-table-body');
   if (!tableBody) {
-    console.error('Table body element not found: orders-table-body');
+    console.error('❌ Table body element not found: orders-table-body');
     return;
   }
   
   const filtered = filterOrders();
+  console.log(`📊 Filtered ${filtered.length} orders (from ${currentOrders.length} total)`);
 
   if (filtered.length === 0) {
     tableBody.innerHTML = `
       <tr>
         <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
-          No orders found matching your filters.
+          ${currentOrders.length === 0 ? 'No orders found. Orders will appear here when customers place orders.' : 'No orders found matching your filters.'}
         </td>
       </tr>
     `;
@@ -196,6 +219,8 @@ function renderOrders() {
       updateOrderStatus(orderId, newStatus);
     });
   });
+  
+  console.log('✅ Orders rendered successfully');
 }
 
 /**
@@ -429,6 +454,8 @@ function showNotification(message, type = 'info') {
  * Initialize orders page
  */
 export async function initOrders() {
+  console.log('🚀 Initializing orders page...');
+  
   // Show loading state
   const tableBody = document.getElementById('orders-table-body');
   if (tableBody) {
@@ -439,11 +466,27 @@ export async function initOrders() {
         </td>
       </tr>
     `;
+  } else {
+    console.error('❌ Table body not found during initialization');
   }
 
   // Fetch orders from backend
-  await fetchOrders();
-  renderOrders();
+  try {
+    await fetchOrders();
+    renderOrders();
+    console.log('✅ Orders page initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize orders page:', error);
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--color-danger);">
+            Failed to initialize: ${error.message}
+          </td>
+        </tr>
+      `;
+    }
+  }
 
   // Search input
   const searchInput = document.getElementById('orders-search');
@@ -510,10 +553,32 @@ export async function initOrders() {
   }
 }
 
-// Auto-initialize
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initOrders);
-} else {
-  initOrders();
+// Auto-initialize with retry mechanism
+function initializeWithRetry() {
+  console.log('🔧 Attempting to initialize orders page...');
+  console.log('Document ready state:', document.readyState);
+  
+  if (document.readyState === 'loading') {
+    console.log('⏳ Document still loading, waiting for DOMContentLoaded...');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 DOMContentLoaded fired');
+      setTimeout(initOrders, 100); // Small delay to ensure all scripts are loaded
+    });
+  } else {
+    console.log('✅ Document ready, initializing immediately');
+    setTimeout(initOrders, 100); // Small delay to ensure all scripts are loaded
+  }
 }
+
+// Also expose globally for manual refresh
+window.refreshOrders = async function() {
+  console.log('🔄 Manual refresh triggered');
+  await fetchOrders();
+  renderOrders();
+};
+
+// Expose initOrders globally as well
+window.initOrdersPage = initOrders;
+
+initializeWithRetry();
 
