@@ -1,13 +1,19 @@
 /**
  * Admin Authentication Module
  * Handles login, logout, and session management
- * Uses localStorage for mock authentication (will be replaced with API calls)
+ * Connected to backend API
  */
-
-import { MOCK_ADMIN } from '../../data/mock-data.js';
 
 const AUTH_STORAGE_KEY = 'admin_auth_session';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// Get API base URL
+function getApiBaseUrl() {
+  if (typeof window !== 'undefined' && window.API_CONFIG) {
+    return window.API_CONFIG.baseURL;
+  }
+  return 'http://localhost:5000';
+}
 
 /**
  * Get current session from storage
@@ -43,9 +49,9 @@ export function isAuthenticated() {
 /**
  * Create a new session
  */
-function createSession(adminData) {
+function createSession(token, adminData) {
   const session = {
-    token: `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    token: token,
     admin: adminData,
     expiresAt: Date.now() + SESSION_DURATION,
     createdAt: Date.now()
@@ -70,35 +76,114 @@ export function logout() {
 }
 
 /**
- * Mock login function
- * In production, this will call: POST /api/admin/auth/login
+ * Real login function - calls backend API
  * 
  * @param {string} email - Admin email
  * @param {string} password - Admin password
  * @returns {Promise<{success: boolean, session?: object, error?: string}>}
  */
 export async function login(email, password) {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Validate credentials (mock)
-  if (email === MOCK_ADMIN.email && password === MOCK_ADMIN.password) {
-    const session = createSession({
-      id: MOCK_ADMIN.id,
-      email: MOCK_ADMIN.email,
-      name: MOCK_ADMIN.name
+  try {
+    const apiUrl = `${getApiBaseUrl()}/api/admin/auth/login`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      return {
+        success: false,
+        error: data.error || 'Login failed. Please try again.'
+      };
+    }
+
+    // Create session with real token from backend
+    const session = createSession(data.data.token, data.data.admin);
 
     return {
       success: true,
       session
     };
+  } catch (error) {
+    console.error('Login error:', error);
+    return {
+      success: false,
+      error: 'Network error. Please check your connection and try again.'
+    };
+  }
+}
+
+/**
+ * Verify token with backend
+ */
+export async function verifyToken() {
+  const session = getSession();
+  if (!session || !session.token) {
+    return { success: false, error: 'No session found' };
   }
 
-  return {
-    success: false,
-    error: 'Invalid email or password'
-  };
+  try {
+    const apiUrl = `${getApiBaseUrl()}/api/admin/auth/verify`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      // Token invalid, clear session
+      clearSession();
+      return { success: false, error: data.error || 'Token verification failed' };
+    }
+
+    return { success: true, admin: data.data.admin };
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return { success: false, error: 'Network error during verification' };
+  }
+}
+
+/**
+ * Logout from backend (invalidate token)
+ */
+export async function logoutFromBackend() {
+  const session = getSession();
+  if (!session || !session.token) {
+    clearSession();
+    return { success: true };
+  }
+
+  try {
+    const apiUrl = `${getApiBaseUrl()}/api/admin/auth/logout`;
+    
+    await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.token}`,
+        'Content-Type': 'application/json',
+      },
+    }).catch(() => {
+      // Continue even if backend logout fails
+    });
+
+    clearSession();
+    return { success: true };
+  } catch (error) {
+    // Clear session even if backend call fails
+    clearSession();
+    return { success: true };
+  }
 }
 
 /**
@@ -110,7 +195,7 @@ export function getCurrentAdmin() {
 }
 
 /**
- * Get auth token (for future API calls)
+ * Get auth token (for API calls)
  */
 export function getAuthToken() {
   const session = getSession();
@@ -120,10 +205,10 @@ export function getAuthToken() {
 // Expose globally for easy access
 window.AdminAuth = {
   login,
-  logout: clearSession,
+  logout: logoutFromBackend,
   isAuthenticated,
   getCurrentAdmin,
   getAuthToken,
-  getSession
+  getSession,
+  verifyToken,
 };
-

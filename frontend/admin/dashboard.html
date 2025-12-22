@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Admin Panel</title>
+    <!-- STRICT AUTH GUARD - Blocks page until authenticated -->
+    <script src="../js/admin/auth-inline.js"></script>
+    <!-- Global Error Handler - Suppresses harmless browser errors -->
+    <script src="../js/error-handler.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
@@ -185,7 +189,18 @@
         async function fetchOrders() {
             try {
                 const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
-                const response = await fetch(apiUrl);
+                const token = window.getAuthToken ? window.getAuthToken() : null;
+                
+                if (!token) {
+                    throw new Error('Authentication required');
+                }
+                
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
                 
                 if (!response.ok) {
                     throw new Error(`Failed to fetch orders: ${response.statusText}`);

@@ -126,8 +126,8 @@ const updateOrderStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Validate status - must match Order model ENUM values
-    const validStatuses = ['pending', 'confirmed', 'delivered', 'cancelled'];
+    // Validate status - must match Order model ENUM values (including in-transit)
+    const validStatuses = ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -193,4 +193,3 @@ module.exports = {
   updateOrderStatus,
   deleteOrder,
 };
-

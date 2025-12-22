@@ -1,6 +1,8 @@
 const Order = require("../models/order.model");
 const Product = require("../models/product.model");
 const Coupon = require("../models/coupon.model");
+const { recordCouponUsage } = require("../utils/pricing");
+const logger = require("../utils/logger");
 
 /**
  * Simple order creation endpoint
@@ -34,7 +36,9 @@ const createSimpleOrder = async (req, res) => {
     }
 
     if (!phone || typeof phone !== 'string') {
-      console.log('❌ Validation failed: phone');
+      // Use logger instead of console.log (redacts sensitive data)
+      const logger = require('../utils/logger');
+      logger.warn('Validation failed: phone');
       return res.status(400).json({ 
         success: false, 
         error: 'Phone number is required' 
@@ -44,7 +48,7 @@ const createSimpleOrder = async (req, res) => {
     // Sanitize phone - remove all non-digits
     const phoneDigits = phone.replace(/[^\d]/g, '');
     if (phoneDigits.length < 7) {
-      console.log('❌ Validation failed: phone too short');
+      logger.warn('Validation failed: phone too short');
       return res.status(400).json({ 
         success: false, 
         error: 'Phone number must contain at least 7 digits' 
@@ -52,7 +56,7 @@ const createSimpleOrder = async (req, res) => {
     }
 
     if (!address || typeof address !== 'string' || address.trim().length < 10) {
-      console.log('❌ Validation failed: address');
+      logger.warn('Validation failed: address');
       return res.status(400).json({ 
         success: false, 
         error: 'Address is required and must be at least 10 characters' 
@@ -108,7 +112,7 @@ const createSimpleOrder = async (req, res) => {
     // Calculate subtotal
     const subtotal = pricePerCylinder * qty;
 
-    // Validate and apply coupon if provided
+    // Validate and apply coupon if provided - use same validation as /api/coupons/validate
     let discount = 0;
     let appliedCouponCode = null;
 
@@ -147,6 +151,18 @@ const createSimpleOrder = async (req, res) => {
           if (isValid && coupon.applicableCylinderType !== 'Both' && coupon.applicableCylinderType !== cylinderType) {
             isValid = false;
             console.log('   Coupon not applicable for this cylinder type');
+          }
+
+          // Check if coupon already used (one-time rule)
+          if (isValid) {
+            const CouponUsage = require("../models/couponUsage.model");
+            const existingUsage = await CouponUsage.findOne({
+              where: { couponCode: normalizedCouponCode },
+            });
+            if (existingUsage) {
+              isValid = false;
+              console.log('   Coupon already used');
+            }
           }
 
           if (isValid) {
@@ -188,7 +204,7 @@ const createSimpleOrder = async (req, res) => {
     try {
       phoneNumber = BigInt(phoneDigits);
     } catch (error) {
-      console.log('❌ Invalid phone number format');
+      logger.warn('Invalid phone number format');
       return res.status(400).json({ 
         success: false, 
         error: 'Invalid phone number format' 
@@ -219,6 +235,11 @@ const createSimpleOrder = async (req, res) => {
     console.log('   Order ID:', order.id);
     console.log('   Customer:', order.customerName);
     console.log('   Total:', order.totalPrice);
+
+    // Record coupon usage if coupon was applied
+    if (order.couponCode && discount > 0) {
+      await recordCouponUsage(order.couponCode, order.id, discount);
+    }
 
     // Return success with enhanced response
     return res.status(201).json({

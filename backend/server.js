@@ -1,4 +1,14 @@
 require("dotenv").config();
+
+// Validate environment variables first (fail fast)
+const { validateEnv } = require("./src/utils/env-validator");
+try {
+  validateEnv();
+} catch (error) {
+  console.error("❌ Server startup aborted due to environment validation failure");
+  process.exit(1);
+}
+
 const app = require("./src/app");
 const { sequelize, testConnection } = require("./src/config/db");
 
@@ -9,6 +19,7 @@ const Product = require("./src/models/product.model");
 const CouponUsage = require("./src/models/couponUsage.model");
 const OrderStatusHistory = require("./src/models/orderStatusHistory.model");
 const Message = require("./src/models/message.model");
+const Admin = require("./src/models/admin.model");
 
 // Define relationships after all models are loaded
 Order.hasMany(OrderStatusHistory, {
@@ -45,6 +56,7 @@ Coupon.hasMany(CouponUsage, {
 });
 
 const PORT = process.env.PORT || 5000;
+let server = null; // Store server instance for graceful shutdown
 
 /**
  * Initialize products in database if they don't exist
@@ -85,27 +97,31 @@ async function initializeProducts() {
 // Start server
 const startServer = async () => {
   try {
-    // Test database connection
+    // Test database connection - exit if it fails
     const dbConnected = await testConnection();
     
     if (!dbConnected) {
-      console.error("⚠️  Warning: Database connection failed, but server will continue");
-    } else {
-      // Sync database schema - DO NOT use force: true as it drops existing tables
-      // Only create tables if they don't exist (safe for production)
-      await sequelize.sync({ alter: false });
-      console.log("✅ Database schema synced with models (tables created if they don't exist)");
-      
-      // Initialize products if they don't exist
-      await initializeProducts();
+      console.error("❌ Fatal: Database connection failed. Server cannot start without database.");
+      console.error("💡 Please check your database configuration in .env file");
+      process.exit(1);
     }
 
+    // Sync database schema - DO NOT use force: true as it drops existing tables
+    // Only create tables if they don't exist (safe for production)
+    await sequelize.sync({ alter: false });
+    console.log("✅ Database schema synced with models (tables created if they don't exist)");
+    
+    // Initialize products if they don't exist
+    await initializeProducts();
+
+    // Bootstrap admin user (one-time, only if no admin exists)
+    const { bootstrapAdmin } = require("./src/utils/bootstrap");
+    await bootstrapAdmin();
+
     // Start Express server
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
-      if (dbConnected) {
-        console.log(`✅ Server and database are ready`);
-      }
+      console.log(`✅ Server and database are ready`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
@@ -113,17 +129,57 @@ const startServer = async () => {
   }
 };
 
-// Handle graceful shutdown
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM signal received: closing server");
-  await sequelize.close();
+/**
+ * Graceful shutdown handler
+ * Closes HTTP server and database connections properly
+ */
+async function gracefulShutdown(signal) {
+  console.log(`\n${signal} signal received: starting graceful shutdown...`);
+  
+  // Stop accepting new connections
+  if (server) {
+    server.close(() => {
+      console.log('✅ HTTP server closed');
+    });
+  }
+  
+  // Close database connections
+  try {
+    await sequelize.close();
+    console.log('✅ Database connections closed');
+  } catch (error) {
+    console.error('❌ Error closing database:', error.message);
+  }
+  
+  // Force exit after timeout
+  setTimeout(() => {
+    console.error('⚠️  Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+  
   process.exit(0);
+}
+
+// Handle graceful shutdown signals
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  // Don't exit in production, log and continue
+  if (process.env.NODE_ENV === 'production') {
+    // In production, log but don't crash
+  } else {
+    // In development, exit to catch issues early
+    process.exit(1);
+  }
 });
 
-process.on("SIGINT", async () => {
-  console.log("SIGINT signal received: closing server");
-  await sequelize.close();
-  process.exit(0);
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught Exception:", error);
+  gracefulShutdown("UNCAUGHT_EXCEPTION");
 });
 
 // Start the server

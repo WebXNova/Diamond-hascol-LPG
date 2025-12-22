@@ -13,6 +13,7 @@ const CouponUsage = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       field: "coupon_code",
+      unique: true, // One-time-use enforcement at DB level (prevents race-condition reuse)
     },
     orderId: {
       type: DataTypes.INTEGER,

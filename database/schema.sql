@@ -18,7 +18,7 @@ CREATE TABLE orders (
   total_price DECIMAL(10,2) NOT NULL,
 
   coupon_code VARCHAR(50),
-  status ENUM('pending','confirmed','delivered','cancelled') DEFAULT 'pending',
+  status ENUM('pending','confirmed','in-transit','delivered','cancelled') DEFAULT 'pending',
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -56,6 +56,18 @@ INSERT INTO products (name, category, description, price, in_stock) VALUES
 ('Domestic LPG Cylinder', 'Domestic', 'LPG cylinder for home use', 2500.00, TRUE),
 ('Commercial LPG Cylinder', 'Commercial', 'LPG cylinder for commercial use', 3000.00, TRUE);
 
+-- Coupons Table
+CREATE TABLE coupons (
+  code VARCHAR(50) PRIMARY KEY,
+  discount_type ENUM('percentage', 'flat') NOT NULL,
+  discount_value DECIMAL(10,2) NOT NULL CHECK (discount_value > 0),
+  applicable_cylinder_type ENUM('Domestic', 'Commercial', 'Both') NOT NULL,
+  min_order_amount DECIMAL(10,2) NULL,
+  expiry_date DATE NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 CREATE TABLE coupon_usage (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -76,4 +88,19 @@ CREATE TABLE coupon_usage (
   CONSTRAINT fk_coupon_usage_order
     FOREIGN KEY (order_id) REFERENCES orders(id)
     ON DELETE CASCADE
+);
+
+-- Admins Table (for admin authentication)
+CREATE TABLE admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  last_login_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_admins_email (email),
+  INDEX idx_admins_active (is_active)
 );

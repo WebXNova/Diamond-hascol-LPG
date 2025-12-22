@@ -1265,6 +1265,10 @@
         </div>
     </div>
 
+    <!-- Global Error Handler - Suppresses harmless browser errors -->
+    <script src="./js/error-handler.js"></script>
+    <!-- Safe Rendering Utility - Prevents XSS (must load early) -->
+    <script src="./js/safe-render.js"></script>
     <!-- Keyboard Event Safety Wrapper - Must load first to fix page-events.js errors -->
     <script src="./js/keyboard-safety.js"></script>
     <script src="./js/page-events.js"></script>
@@ -1274,6 +1278,7 @@
     <script src="./js/api.js"></script>
     <script src="./js/order-storage.js"></script>
     <script src="./js/order.js"></script>
+    <script src="./js/products-loader.js"></script>
     <script src="./js/product-detail.js"></script>
     <script src="./js/product-actions.js"></script>
     <script src="./js/cart-page.js"></script>

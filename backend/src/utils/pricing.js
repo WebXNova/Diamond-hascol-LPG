@@ -3,101 +3,13 @@ const Coupon = require("../models/coupon.model");
 const CouponUsage = require("../models/couponUsage.model");
 
 /**
- * Calculate order total with server-side pricing
- * @param {string} cylinderType - 'Domestic' or 'Commercial'
- * @param {number} quantity - Quantity of cylinders
- * @param {string|null} couponCode - Optional coupon code
- * @returns {Promise<Object>} - { pricePerCylinder, subtotal, discount, total }
- */
-async function calculateOrderTotal(cylinderType, quantity, couponCode = null) {
-  // Default prices (fallback if products table doesn't exist)
-  const defaultPrices = {
-    'Domestic': 2500.00,
-    'Commercial': 3000.00
-  };
-  
-  let pricePerCylinder;
-  
-  // Try to fetch product price from database
-  try {
-    const product = await Product.findOne({
-      where: {
-        category: cylinderType, // 'Domestic' or 'Commercial'
-      },
-    });
-
-    if (product && product.price) {
-      pricePerCylinder = parseFloat(product.price);
-    } else {
-      // Use default price if product not found
-      pricePerCylinder = defaultPrices[cylinderType] || 2500.00;
-      console.log(`⚠️  Product not found in database for category: ${cylinderType}, using default price: ${pricePerCylinder}`);
-    }
-  } catch (dbError) {
-    // If products table doesn't exist, use default prices
-    pricePerCylinder = defaultPrices[cylinderType] || 2500.00;
-    console.log(`⚠️  Products table error, using default price for category ${cylinderType}: ${pricePerCylinder}`);
-  }
-  
-  if (!pricePerCylinder || pricePerCylinder <= 0) {
-    throw new Error(`Invalid price for cylinder category: ${cylinderType}`);
-  }
-
-  const subtotal = Math.round(pricePerCylinder * quantity * 100) / 100;
-
-  // Apply coupon if provided
-  let discount = 0;
-  let couponDetails = null;
-
-  if (couponCode) {
-    const coupon = await Coupon.findOne({
-      where: {
-        code: couponCode.toUpperCase().trim(),
-      },
-    });
-
-    if (coupon) {
-      // Validate coupon discount value
-      const discountValue = parseFloat(coupon.discountValue);
-      if (isNaN(discountValue) || discountValue <= 0) {
-        throw new Error('Invalid coupon discount value');
-      }
-      
-      couponDetails = {
-        code: coupon.code,
-        discountType: coupon.discountType,
-        discountValue: discountValue,
-      };
-
-      // Calculate discount based on coupon type
-      if (coupon.discountType === "percentage") {
-        discount = Math.round((subtotal * discountValue) / 100 * 100) / 100;
-      } else if (coupon.discountType === "flat") {
-        discount = Math.min(subtotal, discountValue);
-      }
-    }
-  }
-
-  // Calculate final total
-  const total = Math.round((subtotal - discount) * 100) / 100;
-
-  return {
-    pricePerCylinder,
-    subtotal,
-    discount,
-    total,
-    coupon: couponDetails,
-  };
-}
-
-/**
- * Validate coupon for an order
+ * Validate coupon with same rules as /api/coupons/validate endpoint
  * @param {string} couponCode - Coupon code
  * @param {string} cylinderType - 'Domestic' or 'Commercial'
  * @param {number} subtotal - Order subtotal
  * @returns {Promise<Object>} - Validation result with discount
  */
-async function validateCoupon(couponCode, cylinderType, subtotal) {
+async function validateCouponForOrder(couponCode, cylinderType, subtotal) {
   if (!couponCode || typeof couponCode !== "string") {
     return {
       valid: false,
@@ -121,7 +33,7 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
     };
   }
 
-  // Check if coupon is active
+  // Check if coupon is active (same as validate endpoint)
   if (!coupon.isActive) {
     return {
       valid: false,
@@ -129,7 +41,7 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
     };
   }
 
-  // Check expiry date
+  // Check expiry date (same as validate endpoint)
   if (coupon.expiryDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -143,7 +55,7 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
     }
   }
 
-  // Check applicable cylinder type
+  // Check applicable cylinder type (same as validate endpoint)
   if (
     coupon.applicableCylinderType !== "Both" &&
     coupon.applicableCylinderType !== cylinderType
@@ -154,7 +66,7 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
     };
   }
 
-  // Check minimum order amount
+  // Check minimum order amount (same as validate endpoint)
   if (coupon.minOrderAmount && subtotal < parseFloat(coupon.minOrderAmount)) {
     return {
       valid: false,
@@ -184,8 +96,6 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
     discountAmount = Math.min(subtotal, parseFloat(coupon.discountValue));
   }
 
-  const newTotal = Math.round((subtotal - discountAmount) * 100) / 100;
-
   return {
     valid: true,
     coupon: {
@@ -194,6 +104,104 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
       discountValue: parseFloat(coupon.discountValue),
     },
     discountAmount,
+  };
+}
+
+/**
+ * Calculate order total with server-side pricing
+ * Uses same coupon validation rules as /api/coupons/validate
+ * @param {string} cylinderType - 'Domestic' or 'Commercial'
+ * @param {number} quantity - Quantity of cylinders
+ * @param {string|null} couponCode - Optional coupon code
+ * @returns {Promise<Object>} - { pricePerCylinder, subtotal, discount, total }
+ */
+async function calculateOrderTotal(cylinderType, quantity, couponCode = null) {
+  // Fetch product from database - REQUIRED (no defaults, products table is source of truth)
+  const product = await Product.findOne({
+    where: {
+      category: cylinderType, // 'Domestic' or 'Commercial'
+    },
+  });
+
+  if (!product) {
+    throw new Error(`Product not found for category: ${cylinderType}`);
+  }
+
+  // ENFORCE STOCK CHECK - Backend must reject out-of-stock products
+  if (product.inStock === false || product.inStock === 0) {
+    throw new Error(`Product "${product.name}" is currently out of stock. Please check back later.`);
+  }
+
+  // Validate price exists and is positive
+  const pricePerCylinder = parseFloat(product.price);
+  if (!pricePerCylinder || pricePerCylinder <= 0 || isNaN(pricePerCylinder)) {
+    throw new Error(`Invalid price for product: ${product.name}`);
+  }
+
+  const subtotal = Math.round(pricePerCylinder * quantity * 100) / 100;
+
+  // Apply coupon if provided - use same validation as /api/coupons/validate
+  let discount = 0;
+  let couponDetails = null;
+
+  if (couponCode) {
+    const validation = await validateCouponForOrder(couponCode, cylinderType, subtotal);
+    
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Invalid coupon code');
+    }
+
+    discount = validation.discountAmount;
+    couponDetails = validation.coupon;
+  }
+
+  // Calculate final total
+  const total = Math.round((subtotal - discount) * 100) / 100;
+
+  return {
+    pricePerCylinder,
+    subtotal,
+    discount,
+    total,
+    coupon: couponDetails,
+  };
+}
+
+/**
+ * Record coupon usage when order is created
+ * @param {string} couponCode - Coupon code
+ * @param {number} orderId - Order ID
+ * @param {number} discountAmount - Discount amount applied
+ */
+async function recordCouponUsage(couponCode, orderId, discountAmount) {
+  if (!couponCode) return;
+
+  try {
+    await CouponUsage.create({
+      couponCode: couponCode.toUpperCase().trim(),
+      orderId,
+      discountAmount,
+    });
+    console.log(`✅ Recorded coupon usage: ${couponCode} for order ${orderId}`);
+  } catch (error) {
+    console.error(`❌ Failed to record coupon usage: ${error.message}`);
+    // Don't throw - coupon usage recording failure shouldn't break order creation
+  }
+}
+
+/**
+ * Validate coupon for an order (legacy function for backward compatibility)
+ * @param {string} couponCode - Coupon code
+ * @param {string} cylinderType - 'Domestic' or 'Commercial'
+ * @param {number} subtotal - Order subtotal
+ * @returns {Promise<Object>} - Validation result with discount
+ */
+async function validateCoupon(couponCode, cylinderType, subtotal) {
+  const result = await validateCouponForOrder(couponCode, cylinderType, subtotal);
+  const newTotal = result.valid ? Math.round((subtotal - result.discountAmount) * 100) / 100 : subtotal;
+  
+  return {
+    ...result,
     newTotal,
   };
 }
@@ -201,4 +209,5 @@ async function validateCoupon(couponCode, cylinderType, subtotal) {
 module.exports = {
   calculateOrderTotal,
   validateCoupon,
+  recordCouponUsage,
 };

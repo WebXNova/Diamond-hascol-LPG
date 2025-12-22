@@ -248,13 +248,19 @@
       const typeKey = product.type?.toLowerCase() || id.toLowerCase();
       const defaults = defaultData[typeKey] || { description: '', specs: [] };
       
+      // Use real product data from API
+      const typeKey = product.category?.toLowerCase() || id.toLowerCase();
+      const defaults = defaultData[typeKey] || { description: '', specs: [] };
+      
       return {
         id: product.id || id,
         name: product.name || 'Product',
-        type: product.type?.toLowerCase() || id,
-        description: defaults.description,
-        image: product.type === 'Domestic' ? './public/domesticcylinder.png' : './public/commercilcylinder.png',
+        type: product.category?.toLowerCase() || id,
+        category: product.category,
+        description: product.description || defaults.description,
+        image: product.imageUrl || (product.category === 'Domestic' ? './public/domesticcylinder.png' : './public/commercilcylinder.png'),
         price: product.price || 0,
+        inStock: product.inStock !== false, // Explicit check
         specs: defaults.specs
       };
     } catch (error) {
@@ -338,21 +344,122 @@
     currentProduct = product;
     lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
-    // Populate left panel
+    // Check stock status
+    const isOutOfStock = product.inStock === false;
+
+    // Populate left panel with real product data
     if (productDetailImg) {
       productDetailImg.src = product.image || '';
       productDetailImg.alt = product.name || 'Product image';
+      // Apply grayscale filter if out of stock
+      if (isOutOfStock) {
+        productDetailImg.style.filter = 'grayscale(100%)';
+        productDetailImg.style.opacity = '0.6';
+      } else {
+        productDetailImg.style.filter = '';
+        productDetailImg.style.opacity = '';
+      }
     }
-    if (productDetailTitle) productDetailTitle.textContent = product.name || 'Product';
+    // Safe HTML escaping helper
+    const escapeHtml = (str) => {
+      if (typeof str !== 'string') str = String(str);
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return str.replace(/[&<>"']/g, (m) => map[m]);
+    };
+    
+    if (productDetailTitle) {
+      const safeName = escapeHtml(product.name || 'Product');
+      if (isOutOfStock) {
+        // Use textContent for safety, then add span via DOM manipulation
+        productDetailTitle.textContent = '';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = safeName;
+        productDetailTitle.appendChild(nameSpan);
+        const stockSpan = document.createElement('span');
+        stockSpan.textContent = ' (Out of Stock)';
+        stockSpan.style.color = '#dc2626';
+        stockSpan.style.fontSize = '0.8em';
+        stockSpan.style.fontWeight = 'normal';
+        productDetailTitle.appendChild(stockSpan);
+      } else {
+        productDetailTitle.textContent = safeName;
+      }
+    }
     if (productDetailDescription) {
-      // Shortened description for left panel (first 200 characters)
-      const description = product.description || '';
-      const shortDesc = description.length > 200 
-        ? description.substring(0, 200) + '...'
-        : description;
-      productDetailDescription.textContent = shortDesc;
+      // Show all product details: Category, Description (safely)
+      const safeCategory = escapeHtml(product.category || 'N/A');
+      const safeDescription = escapeHtml(product.description || 'No description available.');
+      
+      // Use DOM manipulation instead of innerHTML
+      productDetailDescription.textContent = '';
+      
+      const categoryDiv = document.createElement('div');
+      categoryDiv.style.marginBottom = '1rem';
+      categoryDiv.style.padding = '0.75rem';
+      categoryDiv.style.background = 'rgba(11, 74, 166, 0.1)';
+      categoryDiv.style.borderRadius = '8px';
+      categoryDiv.style.borderLeft = '4px solid var(--color-brand)';
+      
+      const categoryLabel = document.createElement('div');
+      categoryLabel.textContent = 'CATEGORY';
+      categoryLabel.style.fontSize = '0.875rem';
+      categoryLabel.style.color = 'var(--text-700)';
+      categoryLabel.style.marginBottom = '0.25rem';
+      categoryLabel.style.fontWeight = '500';
+      categoryLabel.style.textTransform = 'uppercase';
+      categoryLabel.style.letterSpacing = '0.5px';
+      
+      const categoryValue = document.createElement('div');
+      categoryValue.textContent = safeCategory;
+      categoryValue.style.fontSize = '1rem';
+      categoryValue.style.fontWeight = '600';
+      categoryValue.style.color = 'var(--color-brand)';
+      
+      categoryDiv.appendChild(categoryLabel);
+      categoryDiv.appendChild(categoryValue);
+      productDetailDescription.appendChild(categoryDiv);
+      
+      const descDiv = document.createElement('div');
+      descDiv.style.marginBottom = '1rem';
+      
+      const descLabel = document.createElement('div');
+      descLabel.textContent = 'DESCRIPTION';
+      descLabel.style.fontSize = '0.875rem';
+      descLabel.style.color = 'var(--text-700)';
+      descLabel.style.marginBottom = '0.5rem';
+      descLabel.style.fontWeight = '500';
+      descLabel.style.textTransform = 'uppercase';
+      descLabel.style.letterSpacing = '0.5px';
+      
+      const descText = document.createElement('p');
+      descText.textContent = safeDescription;
+      descText.style.lineHeight = '1.7';
+      descText.style.color = 'var(--text-600)';
+      
+      descDiv.appendChild(descLabel);
+      descDiv.appendChild(descText);
+      productDetailDescription.appendChild(descDiv);
     }
-    if (productDetailPriceValue) productDetailPriceValue.textContent = formatPKR(product.price);
+    if (productDetailPriceValue) {
+      // Show price with label (safely)
+      productDetailPriceValue.textContent = '';
+      
+      const priceLabel = document.createElement('div');
+      priceLabel.textContent = 'Price (PKR)';
+      priceLabel.style.fontSize = '0.875rem';
+      priceLabel.style.color = 'var(--text-700)';
+      priceLabel.style.marginBottom = '0.25rem';
+      priceLabel.style.fontWeight = '500';
+      
+      const priceValue = document.createElement('div');
+      priceValue.textContent = formatPKR(product.price || 0);
+      priceValue.style.fontSize = '1.5rem';
+      priceValue.style.fontWeight = '700';
+      priceValue.style.color = 'var(--color-brand)';
+      
+      productDetailPriceValue.appendChild(priceLabel);
+      productDetailPriceValue.appendChild(priceValue);
+    }
 
     // Populate order form
     if (productOrderId) productOrderId.value = product.id || '';
@@ -367,6 +474,47 @@
     couponState = { status: 'idle', code: '' };
     if (productOrderCoupon) productOrderCoupon.value = '';
     if (productOrderErrCoupon) setPlainError(productOrderErrCoupon, '');
+
+    // Handle out of stock - disable buy buttons
+    if (productDetailAddCart) {
+      if (isOutOfStock) {
+        productDetailAddCart.disabled = true;
+        productDetailAddCart.textContent = 'Out of Stock';
+        productDetailAddCart.classList.add('btn--disabled');
+        productDetailAddCart.style.opacity = '0.6';
+        productDetailAddCart.style.cursor = 'not-allowed';
+      } else {
+        productDetailAddCart.disabled = false;
+        productDetailAddCart.textContent = 'Add to Cart';
+        productDetailAddCart.classList.remove('btn--disabled');
+        productDetailAddCart.style.opacity = '';
+        productDetailAddCart.style.cursor = '';
+      }
+    }
+
+    // Disable order form if out of stock
+    if (productOrderForm) {
+      const formInputs = productOrderForm.querySelectorAll('input, select, textarea, button[type="submit"]');
+      formInputs.forEach(input => {
+        if (input.type !== 'hidden') {
+          input.disabled = isOutOfStock;
+        }
+      });
+      const submitBtn = productOrderForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        if (isOutOfStock) {
+          submitBtn.textContent = 'Out of Stock';
+          submitBtn.classList.add('btn--disabled');
+          submitBtn.style.opacity = '0.6';
+          submitBtn.style.cursor = 'not-allowed';
+        } else {
+          submitBtn.textContent = 'Place Order';
+          submitBtn.classList.remove('btn--disabled');
+          submitBtn.style.opacity = '';
+          submitBtn.style.cursor = '';
+        }
+      }
+    }
 
     // Update price summary and button states
     window.requestAnimationFrame(() => {
@@ -584,6 +732,12 @@
   const addToCartFromProductPanel = async () => {
     if (!currentProduct) return;
 
+    // Check stock before adding to cart
+    if (currentProduct.inStock === false) {
+      showToast('This product is currently out of stock.', false);
+      return;
+    }
+
     const quantity = 1; // Default quantity from product panel
 
     try {
@@ -609,6 +763,12 @@
 
   const addToCartFromForm = async (formData) => {
     if (!currentProduct) return;
+
+    // Check stock before adding to cart
+    if (currentProduct.inStock === false) {
+      showToast('This product is currently out of stock and cannot be purchased.', false);
+      return;
+    }
 
     const quantity = parseInt(formData.get('quantity') || '1', 10);
     const cylinderType = formData.get('cylinderType') || currentProduct.type;

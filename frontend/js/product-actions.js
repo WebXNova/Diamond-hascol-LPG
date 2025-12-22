@@ -63,6 +63,7 @@
         price: product.price,
         image: product.imageUrl || '',
         description: product.description || '',
+        inStock: product.inStock !== false, // Explicit check
         specs: defaultSpecs[type] || defaultSpecs['domestic']
       };
     } catch (error) {
@@ -98,25 +99,118 @@
     currentProductId = productId;
     lastFocusedElement = document.activeElement;
 
-    // Populate modal
-    modalTitle.textContent = product.name;
-    modalImage.src = product.image;
-    modalImage.alt = product.name;
-    modalDescription.textContent = product.description;
+    // Safe HTML escaping helper
+    const escapeHtml = (str) => {
+      if (typeof str !== 'string') str = String(str);
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return str.replace(/[&<>"']/g, (m) => map[m]);
+    };
+    
+    // Populate modal with all product details (safely)
+    const safeName = escapeHtml(product.name || 'Product');
+    modalTitle.textContent = safeName;
+    modalImage.src = product.image || '';
+    modalImage.alt = safeName;
+    
+    // Show full description (using DOM manipulation, not innerHTML)
+    modalDescription.textContent = '';
+    
+    const categoryDiv = document.createElement('div');
+    categoryDiv.style.marginBottom = '1rem';
+    
+    const categoryLabel = document.createElement('strong');
+    categoryLabel.textContent = 'CATEGORY:';
+    categoryLabel.style.color = 'var(--text-700)';
+    categoryLabel.style.fontSize = '0.875rem';
+    categoryLabel.style.textTransform = 'uppercase';
+    categoryLabel.style.letterSpacing = '0.5px';
+    
+    const categoryValue = document.createElement('span');
+    categoryValue.textContent = escapeHtml(product.category || 'N/A');
+    categoryValue.style.marginLeft = '0.5rem';
+    categoryValue.style.fontWeight = '600';
+    categoryValue.style.color = 'var(--color-brand)';
+    
+    categoryDiv.appendChild(categoryLabel);
+    categoryDiv.appendChild(categoryValue);
+    modalDescription.appendChild(categoryDiv);
+    
+    const descDiv = document.createElement('div');
+    descDiv.style.marginBottom = '1rem';
+    
+    const descLabel = document.createElement('strong');
+    descLabel.textContent = 'DESCRIPTION:';
+    descLabel.style.color = 'var(--text-700)';
+    descLabel.style.fontSize = '0.875rem';
+    descLabel.style.textTransform = 'uppercase';
+    descLabel.style.letterSpacing = '0.5px';
+    
+    const descText = document.createElement('p');
+    descText.textContent = escapeHtml(product.description || 'No description available.');
+    descText.style.marginTop = '0.5rem';
+    descText.style.lineHeight = '1.6';
+    descText.style.color = 'var(--text-600)';
+    
+    descDiv.appendChild(descLabel);
+    descDiv.appendChild(descText);
+    modalDescription.appendChild(descDiv);
 
-    // Clear and populate specs
-    modalSpecs.innerHTML = '';
+    // Clear and populate specs (safely)
+    modalSpecs.textContent = '';
     if (product.specs && Array.isArray(product.specs)) {
       product.specs.forEach(spec => {
         const li = document.createElement('li');
-        li.textContent = spec;
+        li.textContent = spec; // textContent is safe
         modalSpecs.appendChild(li);
       });
     }
 
-    // Format price
+    // Format price with label (safely)
     const moneyFmt = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
-    modalPrice.textContent = `₨${moneyFmt.format(product.price)} per cylinder`;
+    modalPrice.textContent = '';
+    
+    const priceLabel = document.createElement('div');
+    priceLabel.textContent = 'Price (PKR)';
+    priceLabel.style.fontSize = '0.875rem';
+    priceLabel.style.color = 'var(--text-700)';
+    priceLabel.style.marginBottom = '0.25rem';
+    priceLabel.style.fontWeight = '500';
+    
+    const priceValue = document.createElement('div');
+    priceValue.textContent = `₨${moneyFmt.format(product.price || 0)} per cylinder`;
+    priceValue.style.fontSize = '1.5rem';
+    priceValue.style.fontWeight = '700';
+    priceValue.style.color = 'var(--color-brand)';
+    
+    modalPrice.appendChild(priceLabel);
+    modalPrice.appendChild(priceValue);
+
+    // Handle stock status
+    const isOutOfStock = product.inStock === false;
+    if (modalBuyNow) {
+      if (isOutOfStock) {
+        modalBuyNow.disabled = true;
+        modalBuyNow.textContent = 'Out of Stock';
+        modalBuyNow.classList.add('btn--disabled');
+        modalBuyNow.style.opacity = '0.6';
+        modalBuyNow.style.cursor = 'not-allowed';
+      } else {
+        modalBuyNow.disabled = false;
+        modalBuyNow.textContent = 'Buy Now';
+        modalBuyNow.classList.remove('btn--disabled');
+        modalBuyNow.style.opacity = '';
+        modalBuyNow.style.cursor = '';
+      }
+    }
+
+    // Apply grayscale to image if out of stock
+    if (modalImage && isOutOfStock) {
+      modalImage.style.filter = 'grayscale(100%)';
+      modalImage.style.opacity = '0.6';
+    } else if (modalImage) {
+      modalImage.style.filter = '';
+      modalImage.style.opacity = '';
+    }
 
     // Show modal
     modal.classList.remove('is-hidden');
@@ -169,8 +263,14 @@
     });
   }
   if (modalBuyNow) {
-    modalBuyNow.addEventListener('click', () => {
-      if (currentProductId) {
+    modalBuyNow.addEventListener('click', async () => {
+      if (currentProductId && !modalBuyNow.disabled) {
+        // Check stock before navigating
+        const product = await fetchProduct(currentProductId);
+        if (product && product.inStock === false) {
+          alert('This product is currently out of stock and cannot be purchased.');
+          return;
+        }
         closeDescriptionModal();
         navigateToOrderPage(currentProductId);
       }
@@ -408,6 +508,12 @@
     if (!product) {
       console.error('Product not found:', productId);
       alert('Product not found. Please try again.');
+      return;
+    }
+
+    // Check stock before navigating
+    if (product.inStock === false) {
+      alert('This product is currently out of stock and cannot be purchased. Please check back later.');
       return;
     }
 
@@ -700,16 +806,23 @@
     });
   });
 
-  const buyNowButtons = document.querySelectorAll('.product-buy-now-btn');
-  buyNowButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Use event delegation for dynamically loaded buy buttons
+  document.addEventListener('click', async (e) => {
+    const buyBtn = e.target.closest('.product-buy-now-btn');
+    if (buyBtn && !buyBtn.disabled) {
       e.preventDefault();
       e.stopPropagation();
-      const productId = btn.getAttribute('data-product-id');
+      const productId = buyBtn.getAttribute('data-product-id');
       if (productId) {
+        // Check stock before navigating
+        const product = await fetchProduct(productId);
+        if (product && product.inStock === false) {
+          alert('This product is currently out of stock and cannot be purchased.');
+          return;
+        }
         navigateToOrderPage(productId);
       }
-    });
+    }
   });
 
   // Prevent product card click when clicking buttons

@@ -1,3 +1,11 @@
+/**
+ * DEPRECATED: This mysql2 pool configuration is not used.
+ * All models and database operations use Sequelize from src/config/db.js
+ * 
+ * This file is kept for backward compatibility but should not be imported.
+ * If you need database access, use: require("../src/config/db")
+ */
+
 const mysql = require("mysql2/promise");
 
 // Create MySQL connection pool

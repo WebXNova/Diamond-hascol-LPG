@@ -32,10 +32,25 @@ const messageRateLimiter = rateLimit({
   statusCode: 429
 });
 
+/**
+ * Rate limiter for admin login attempts
+ * 5 failed attempts per 15 minutes per IP (prevents brute-force)
+ */
+const adminAuthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 login attempts per windowMs
+  message: {
+    success: false,
+    error: 'Too many login attempts from this IP, please try again after 15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  skipSuccessfulRequests: true, // Don't count successful logins
+});
+
 module.exports = {
   orderRateLimiter,
-  messageRateLimiter
+  messageRateLimiter,
+  adminAuthRateLimiter,
 };
-
-
-

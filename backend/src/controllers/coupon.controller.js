@@ -1,4 +1,5 @@
 const Coupon = require("../models/coupon.model");
+const CouponUsage = require("../models/couponUsage.model");
 
 /**
  * Validate coupon code
@@ -92,6 +93,18 @@ const validateCouponCode = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: `This coupon is not applicable for ${cylinderType} cylinders`
+      });
+    }
+
+    // Check if coupon already used (one-time usage rule - consistent with order creation)
+    const existingUsage = await CouponUsage.findOne({
+      where: { couponCode: normalizedCode },
+    });
+
+    if (existingUsage) {
+      return res.status(400).json({
+        success: false,
+        error: 'Coupon has already been used'
       });
     }
 

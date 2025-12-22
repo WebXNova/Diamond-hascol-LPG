@@ -27,7 +27,18 @@ function formatDate(dateString) {
 async function fetchMessages() {
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminMessages') : 'http://localhost:5000/api/admin/messages';
-    const response = await fetch(apiUrl);
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch messages: ${response.statusText}`);
@@ -198,10 +209,17 @@ window.viewMessage = async function(messageId) {
 async function markMessageAsRead(messageId) {
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminMessages') : 'http://localhost:5000/api/admin/messages';
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
     const response = await fetch(`${apiUrl}/${messageId}/read`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 

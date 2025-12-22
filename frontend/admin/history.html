@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History & Analytics - Admin Panel</title>
+    <!-- STRICT AUTH GUARD - Blocks page until authenticated -->
+    <script src="../js/admin/auth-inline.js"></script>
+    <!-- Global Error Handler - Suppresses harmless browser errors -->
+    <script src="../js/error-handler.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
@@ -249,6 +253,7 @@
         </svg>
     </button>
 
+    <script src="../js/api.js"></script>
     <script type="module">
         import '../js/admin/router.js';
         import '../js/admin/layout.js';

@@ -54,7 +54,15 @@ async function fetchOrders() {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
     console.log('🔄 Fetching orders from:', apiUrl);
     
-    const response = await fetch(apiUrl);
+    // Use authenticated API request
+    const response = window.authenticatedApiRequest 
+      ? await window.authenticatedApiRequest('adminOrders')
+      : await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${window.getAuthToken ? window.getAuthToken() : ''}`,
+            'Content-Type': 'application/json',
+          },
+        });
     console.log('📡 Response status:', response.status, response.statusText);
     
     if (!response.ok) {
@@ -227,10 +235,17 @@ function renderOrders() {
 async function updateOrderStatus(orderId, newStatus) {
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
     const response = await fetch(`${apiUrl}/${orderId}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ status: newStatus }),
     });
@@ -267,7 +282,18 @@ async function updateOrderStatus(orderId, newStatus) {
 window.viewOrderDetails = async function(orderId) {
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
-    const response = await fetch(`${apiUrl}/${orderId}`);
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(`${apiUrl}/${orderId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch order details');
@@ -408,10 +434,17 @@ window.deleteOrder = async function(orderId) {
 
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') : 'http://localhost:5000/api/admin/orders';
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
     const response = await fetch(`${apiUrl}/${orderId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
 

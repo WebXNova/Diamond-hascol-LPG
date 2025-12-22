@@ -59,7 +59,7 @@ const Order = sequelize.define(
       field: "coupon_code",
     },
     status: {
-      type: DataTypes.ENUM("pending", "confirmed", "delivered", "cancelled"),
+      type: DataTypes.ENUM("pending", "confirmed", "in-transit", "delivered", "cancelled"),
       allowNull: false,
       defaultValue: "pending",
     },
@@ -70,7 +70,6 @@ const Order = sequelize.define(
     createdAt: "created_at",
     updatedAt: "updated_at",
     tableName: "orders",
-    // Ensure Sequelize doesn't try to modify the table structure
     freezeTableName: true,
   }
 );

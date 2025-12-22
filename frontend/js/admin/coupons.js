@@ -1,11 +1,89 @@
 /**
  * Coupons Management Module
  * Handles coupons list, create, edit, delete operations
- * Connected to backend API
+ * Connected to backend API with strict authentication
  */
 
 let currentCoupons = [];
 let isLoading = false;
+
+/**
+ * Get auth token safely
+ */
+function getAuthToken() {
+  try {
+    if (window.getAuthToken && typeof window.getAuthToken === 'function') {
+      return window.getAuthToken();
+    }
+    // Fallback: get from localStorage directly
+    const sessionData = localStorage.getItem('admin_auth_session');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      return session.token || null;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Format date
+ */
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric'
+  });
+}
+
+/**
+ * Check if coupon is expired
+ */
+function isExpired(expiresAt) {
+  if (!expiresAt) return false;
+  return new Date(expiresAt) < new Date();
+}
+
+/**
+ * Format coupon value
+ */
+function formatCouponValue(coupon) {
+  if (coupon.type === 'percentage') {
+    return `${coupon.value}%`;
+  } else {
+    return `₨${coupon.value.toLocaleString('en-PK')}`;
+  }
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
+    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    animation: slideIn 0.3s ease-out;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-out';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
 
 /**
  * Fetch coupons from backend API
@@ -14,12 +92,28 @@ async function fetchCoupons() {
   try {
     isLoading = true;
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminCoupons') : 'http://localhost:5000/api/admin/coupons';
+    
+    // Get auth token
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required. Please login again.');
+    }
+    
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
+
+    // Handle 401 Unauthorized
+    if (response.status === 401) {
+      // Clear session and redirect to login
+      localStorage.removeItem('admin_auth_session');
+      window.location.replace('/admin/login.html');
+      throw new Error('Session expired. Please login again.');
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to fetch coupons: ${response.statusText}`);
@@ -40,7 +134,8 @@ async function fetchCoupons() {
         usageCount: 0, // Backend doesn't track this yet
         expiresAt: coupon.expiryDate ? new Date(coupon.expiryDate).toISOString() : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // Default 1 year if no expiry
         isActive: coupon.isActive,
-        createdAt: coupon.createdAt || new Date().toISOString()
+        createdAt: coupon.createdAt || new Date().toISOString(),
+        applicableCylinderType: coupon.applicableCylinderType || 'Both'
       }));
       return currentCoupons;
     } else {
@@ -48,40 +143,14 @@ async function fetchCoupons() {
     }
   } catch (error) {
     console.error('Error fetching coupons:', error);
-    showNotification('Failed to load coupons. Please refresh the page.', 'error');
+    
+    // Don't show error if redirecting to login
+    if (!error.message.includes('Session expired') && !error.message.includes('Authentication required')) {
+      showNotification('Failed to load coupons. Please refresh the page.', 'error');
+    }
     return [];
   } finally {
     isLoading = false;
-  }
-}
-
-/**
- * Format date
- */
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric'
-  });
-}
-
-/**
- * Check if coupon is expired
- */
-function isExpired(expiresAt) {
-  return new Date(expiresAt) < new Date();
-}
-
-/**
- * Format coupon value
- */
-function formatCouponValue(coupon) {
-  if (coupon.type === 'percentage') {
-    return `${coupon.value}%`;
-  } else {
-    return `₨${coupon.value}`;
   }
 }
 
@@ -90,13 +159,21 @@ function formatCouponValue(coupon) {
  */
 function renderCoupons() {
   const tableBody = document.getElementById('coupons-table-body');
-  if (!tableBody) return;
+  if (!tableBody) {
+    console.error('Table body element not found: coupons-table-body');
+    return;
+  }
 
   if (currentCoupons.length === 0) {
     tableBody.innerHTML = `
       <tr>
+<<<<<<< HEAD
         <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-500);">
           No coupons found. Create your first coupon!
+=======
+        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
+          No coupons found. Create your first coupon to get started.
+>>>>>>> 7f425a9 (backend completed)
         </td>
       </tr>
     `;
@@ -104,7 +181,9 @@ function renderCoupons() {
   }
 
   tableBody.innerHTML = currentCoupons.map(coupon => {
+    const usagePercent = coupon.usageLimit > 0 ? (coupon.usageCount / coupon.usageLimit) * 100 : 0;
     const expired = isExpired(coupon.expiresAt);
+<<<<<<< HEAD
     const usagePercent = (coupon.usageCount / coupon.usageLimit) * 100;
 
     const typeLabel = coupon.type === 'percentage' ? 'Percentage' : 'Fixed Amount';
@@ -134,16 +213,28 @@ function renderCoupons() {
       </div>
     `;
 
+=======
+    
+>>>>>>> 7f425a9 (backend completed)
     return `
       <tr class="admin-table__main-row" data-coupon-id="${coupon.id}">
         <td><strong>${coupon.code}</strong></td>
         <td>${formatCouponValue(coupon)}</td>
+<<<<<<< HEAD
         <td>${typeLabel}</td>
         <td>${minPurchaseLabel}</td>
         <td>${maxDiscountLabel}</td>
         <td>
           <span class="admin-badge ${statusClass}">
             ${statusLabel}
+=======
+        <td>${coupon.type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
+        <td>${coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString('en-PK')}` : 'None'}</td>
+        <td>${coupon.maxDiscount > 0 ? `₨${coupon.maxDiscount.toLocaleString('en-PK')}` : 'N/A'}</td>
+        <td>
+          <span class="admin-badge ${coupon.isActive && !expired ? 'admin-badge--confirmed' : 'admin-badge--cancelled'}">
+            ${coupon.isActive && !expired ? 'Active' : expired ? 'Expired' : 'Inactive'}
+>>>>>>> 7f425a9 (backend completed)
           </span>
         </td>
         <td>${usageMarkup}</td>
@@ -154,6 +245,7 @@ function renderCoupons() {
             More
           </button>
         </td>
+<<<<<<< HEAD
       </tr>
       <tr class="admin-table__details-row" data-coupon-id="${coupon.id}" aria-hidden="true">
         <td colspan="10">
@@ -182,6 +274,17 @@ function renderCoupons() {
               <span class="admin-table__details-label">Actions</span>
               <span class="admin-table__details-value">${actionsMarkup}</span>
             </div>
+=======
+        <td>${formatDate(coupon.expiresAt)}</td>
+        <td>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="admin-btn admin-btn--secondary" onclick="editCoupon('${coupon.code}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+              Edit
+            </button>
+            <button class="admin-btn admin-btn--danger" onclick="deleteCoupon('${coupon.code}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+              Delete
+            </button>
+>>>>>>> 7f425a9 (backend completed)
           </div>
         </td>
       </tr>
@@ -230,6 +333,7 @@ window.openCreateCoupon = function() {
   const usageLimitInput = document.getElementById('coupon-usage-limit');
   const expiresInput = document.getElementById('coupon-expires-at');
   const isActiveCheckbox = document.getElementById('coupon-is-active');
+  const cylinderTypeSelect = document.getElementById('coupon-cylinder-type');
   
   if (codeInput) codeInput.value = '';
   if (typeSelect) typeSelect.value = 'percentage';
@@ -244,6 +348,7 @@ window.openCreateCoupon = function() {
     expiresInput.min = today;
   }
   if (isActiveCheckbox) isActiveCheckbox.checked = true;
+  if (cylinderTypeSelect) cylinderTypeSelect.value = 'Both';
   
   // Show max discount field for percentage type
   toggleCouponTypeFields();
@@ -267,44 +372,44 @@ window.editCoupon = function(couponId) {
   const modalTitle = document.getElementById('coupon-form-title');
   
   if (!modal || !form || !modalTitle) {
-    console.error('Coupon form elements not found');
     showNotification('Error: Form elements not found', 'error');
     return;
   }
+
+  modalTitle.textContent = `Edit Coupon: ${coupon.code}`;
+  form.dataset.couponId = coupon.code;
   
-  modalTitle.textContent = 'Edit Coupon';
-  form.dataset.couponId = coupon.code; // Use code as ID for API calls
-  
-  // Populate form
+  // Populate form fields
   const codeInput = document.getElementById('coupon-code');
   const typeSelect = document.getElementById('coupon-type');
   const valueInput = document.getElementById('coupon-value');
   const minPurchaseInput = document.getElementById('coupon-min-purchase');
+  const maxDiscountInput = document.getElementById('coupon-max-discount');
+  const usageLimitInput = document.getElementById('coupon-usage-limit');
   const expiresInput = document.getElementById('coupon-expires-at');
   const isActiveCheckbox = document.getElementById('coupon-is-active');
   const cylinderTypeSelect = document.getElementById('coupon-cylinder-type');
   
   if (codeInput) {
     codeInput.value = coupon.code;
-    codeInput.disabled = true; // Disable code editing
+    codeInput.disabled = true; // Can't change code when editing
   }
-  if (typeSelect) typeSelect.value = coupon.type === 'percentage' ? 'percentage' : 'flat';
+  if (typeSelect) typeSelect.value = coupon.type;
   if (valueInput) valueInput.value = coupon.value;
-  if (minPurchaseInput) minPurchaseInput.value = coupon.minPurchase || 0;
+  if (minPurchaseInput) minPurchaseInput.value = coupon.minPurchase || '0';
+  if (maxDiscountInput) maxDiscountInput.value = coupon.maxDiscount || '';
+  if (usageLimitInput) usageLimitInput.value = coupon.usageLimit || '100';
   if (expiresInput) {
-    const date = coupon.expiresAt ? new Date(coupon.expiresAt) : null;
-    if (date && !isNaN(date.getTime())) {
-      expiresInput.value = date.toISOString().split('T')[0];
-    }
+    const expiryDate = coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().split('T')[0] : '';
+    expiresInput.value = expiryDate;
     expiresInput.min = new Date().toISOString().split('T')[0];
   }
-  if (isActiveCheckbox) isActiveCheckbox.checked = coupon.isActive;
+  if (isActiveCheckbox) isActiveCheckbox.checked = coupon.isActive !== false;
   if (cylinderTypeSelect) {
-    // Map to backend format - assume 'Both' if not specified
-    cylinderTypeSelect.value = 'Both'; // Default, can be enhanced if backend provides this field
+    cylinderTypeSelect.value = coupon.applicableCylinderType || 'Both';
   }
   
-  // Show/hide max discount field
+  // Show max discount field for percentage type
   toggleCouponTypeFields();
   
   modal.classList.add('show');
@@ -312,10 +417,10 @@ window.editCoupon = function(couponId) {
 };
 
 /**
- * Delete coupon via API
+ * Delete coupon
  */
 window.deleteCoupon = async function(couponId) {
-  const coupon = currentCoupons.find(c => c.id === couponId);
+  const coupon = currentCoupons.find(c => c.id === couponId || c.code === couponId);
   if (!coupon) {
     showNotification('Coupon not found', 'error');
     return;
@@ -327,12 +432,26 @@ window.deleteCoupon = async function(couponId) {
 
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminCoupons') : 'http://localhost:5000/api/admin/coupons';
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
     const response = await fetch(`${apiUrl}/${coupon.code}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
+
+    // Handle 401
+    if (response.status === 401) {
+      localStorage.removeItem('admin_auth_session');
+      window.location.replace('/admin/login.html');
+      throw new Error('Session expired');
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -369,6 +488,8 @@ window.saveCoupon = async function(e) {
   const typeSelect = document.getElementById('coupon-type');
   const valueInput = document.getElementById('coupon-value');
   const minPurchaseInput = document.getElementById('coupon-min-purchase');
+  const maxDiscountInput = document.getElementById('coupon-max-discount');
+  const usageLimitInput = document.getElementById('coupon-usage-limit');
   const expiresInput = document.getElementById('coupon-expires-at');
   const isActiveCheckbox = document.getElementById('coupon-is-active');
   const cylinderTypeSelect = document.getElementById('coupon-cylinder-type');
@@ -383,7 +504,7 @@ window.saveCoupon = async function(e) {
     discountType: typeSelect.value, // 'percentage' or 'flat'
     discountValue: parseFloat(valueInput.value),
     minOrderAmount: parseFloat(minPurchaseInput?.value || 0) || undefined,
-    applicableCylinderType: cylinderTypeSelect?.value || 'Both', // 'Domestic', 'Commercial', or 'Both'
+    applicableCylinderType: cylinderTypeSelect ? cylinderTypeSelect.value : 'Both', // 'Domestic', 'Commercial', or 'Both'
     expiryDate: expiresInput.value || undefined, // YYYY-MM-DD format
     isActive: isActiveCheckbox ? isActiveCheckbox.checked : true
   };
@@ -415,6 +536,11 @@ window.saveCoupon = async function(e) {
 
   try {
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminCoupons') : 'http://localhost:5000/api/admin/coupons';
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new Error('Authentication required');
+    }
     
     if (couponId) {
       // Update existing coupon
@@ -422,9 +548,17 @@ window.saveCoupon = async function(e) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(couponData),
       });
+
+      // Handle 401
+      if (response.status === 401) {
+        localStorage.removeItem('admin_auth_session');
+        window.location.replace('/admin/login.html');
+        throw new Error('Session expired');
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -438,9 +572,17 @@ window.saveCoupon = async function(e) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(couponData),
       });
+
+      // Handle 401
+      if (response.status === 401) {
+        localStorage.removeItem('admin_auth_session');
+        window.location.replace('/admin/login.html');
+        throw new Error('Session expired');
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -465,9 +607,21 @@ window.saveCoupon = async function(e) {
  */
 window.closeCouponForm = function() {
   const modal = document.getElementById('coupon-form-modal');
+  const form = document.getElementById('coupon-form');
+  const codeInput = document.getElementById('coupon-code');
+  
   if (modal) {
     modal.classList.remove('show');
     document.body.style.overflow = ''; // Restore scrolling
+  }
+  
+  if (form) {
+    form.reset();
+    form.dataset.couponId = '';
+  }
+  
+  if (codeInput) {
+    codeInput.disabled = false; // Re-enable code input
   }
 };
 
@@ -485,37 +639,6 @@ function toggleCouponTypeFields() {
   } else {
     maxDiscountGroup.style.display = 'none';
   }
-}
-
-/**
- * Show notification
- */
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  const bgColor = type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe';
-  const textColor = type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af';
-  
-  notification.style.cssText = `
-    position: fixed;
-    top: 2rem;
-    right: 2rem;
-    padding: 1rem 1.5rem;
-    background: ${bgColor};
-    color: ${textColor};
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 2000;
-    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    max-width: 400px;
-    font-weight: 500;
-  `;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
 }
 
 /**
@@ -538,40 +661,10 @@ export async function initCoupons() {
   await fetchCoupons();
   renderCoupons();
 
-  // Coupon type change handler
+  // Setup coupon type toggle
   const typeSelect = document.getElementById('coupon-type');
   if (typeSelect) {
     typeSelect.addEventListener('change', toggleCouponTypeFields);
-  }
-
-  // Close modal on escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const modal = document.getElementById('coupon-form-modal');
-      if (modal && modal.classList.contains('show')) {
-        closeCouponForm();
-      }
-    }
-  });
-
-  // Close modal when clicking backdrop
-  const modal = document.getElementById('coupon-form-modal');
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeCouponForm();
-      }
-    });
-  }
-
-  // Refresh button (if exists)
-  const refreshBtn = document.getElementById('coupons-refresh');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      await fetchCoupons();
-      renderCoupons();
-      showNotification('Coupons refreshed', 'success');
-    });
   }
 }
 

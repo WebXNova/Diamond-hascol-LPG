@@ -1,15 +1,83 @@
 /**
- * Order History & Analytics Module
- * Handles order history display, date filtering, and analytics
- * Connected to backend API
+ * Order History Management Module
+ * Handles order history list, filtering, and analytics
+ * Connected to backend API with strict authentication
  */
 
 let currentHistory = [];
 let currentFilters = {
+  status: 'all',
+  search: '',
   dateFrom: '',
-  dateTo: '',
-  status: 'all'
+  dateTo: ''
 };
+
+/**
+ * Get auth token safely
+ */
+function getAuthToken() {
+  try {
+    if (window.getAuthToken && typeof window.getAuthToken === 'function') {
+      return window.getAuthToken();
+    }
+    // Fallback: get from localStorage directly
+    const sessionData = localStorage.getItem('admin_auth_session');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      return session.token || null;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Format currency
+ */
+function formatCurrency(amount) {
+  return `₨${amount.toLocaleString('en-PK')}`;
+}
+
+/**
+ * Format date
+ */
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
+    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 2000;
+    animation: slideIn 0.3s ease-out;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease-out';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
 
 /**
  * Fetch order history from backend API (only delivered and cancelled orders)
@@ -18,6 +86,12 @@ async function fetchHistory() {
   try {
     // Use the history endpoint that returns only delivered and cancelled orders
     const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') + '/history' : 'http://localhost:5000/api/admin/orders/history';
+    
+    // Get auth token
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required. Please login again.');
+    }
     
     // Build query params
     const params = new URLSearchParams();
@@ -30,8 +104,17 @@ async function fetchHistory() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
     });
+
+    // Handle 401 Unauthorized
+    if (response.status === 401) {
+      // Clear session and redirect to login
+      localStorage.removeItem('admin_auth_session');
+      window.location.replace('/admin/login.html');
+      throw new Error('Session expired. Please login again.');
+    }
 
     if (!response.ok) {
       throw new Error(`Failed to fetch orders: ${response.statusText}`);
@@ -59,48 +142,17 @@ async function fetchHistory() {
     }
   } catch (error) {
     console.error('Error fetching history:', error);
-    showNotification('Failed to load order history. Please refresh the page.', 'error');
+    
+    // Don't show error if redirecting to login
+    if (!error.message.includes('Session expired') && !error.message.includes('Authentication required')) {
+      showNotification('Failed to load order history. Please refresh the page.', 'error');
+    }
     return [];
   }
 }
 
 /**
- * Format currency
- */
-function formatCurrency(amount) {
-  return `₨${amount.toLocaleString()}`;
-}
-
-/**
- * Format date
- */
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-/**
- * Get status badge class
- */
-function getStatusBadgeClass(status) {
-  const statusMap = {
-    'pending': 'admin-badge--pending',
-    'confirmed': 'admin-badge--confirmed',
-    'in-transit': 'admin-badge--in-transit',
-    'delivered': 'admin-badge--delivered',
-    'cancelled': 'admin-badge--cancelled'
-  };
-  return statusMap[status] || 'admin-badge--pending';
-}
-
-/**
- * Filter history (client-side filtering on already fetched data)
+ * Filter history based on current filters
  */
 function filterHistory() {
   let filtered = [...currentHistory];
@@ -127,80 +179,105 @@ function filterHistory() {
     filtered = filtered.filter(order => new Date(order.createdAt) <= toDate);
   }
 
-  // Sort by date (newest first)
-  filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
   return filtered;
 }
 
 /**
- * Calculate analytics
+ * Calculate stats from filtered history
  */
-function calculateAnalytics() {
-  const filtered = filterHistory();
-  
-  const totalRevenue = filtered.reduce((sum, order) => sum + order.total, 0);
+function calculateStats(filtered) {
   const totalOrders = filtered.length;
-  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-  
-  const statusCounts = {
-    pending: 0,
-    confirmed: 0,
-    'in-transit': 0,
-    delivered: 0,
-    cancelled: 0
-  };
-  
+  const totalRevenue = filtered.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+  const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  // Status breakdown
+  const statusBreakdown = {};
   filtered.forEach(order => {
-    statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+    const status = order.status || 'pending';
+    statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
   });
 
-  const typeCounts = {
-    domestic: 0,
-    commercial: 0
-  };
-  
+  // Type breakdown
+  const typeBreakdown = {};
   filtered.forEach(order => {
-    typeCounts[order.cylinderType] = (typeCounts[order.cylinderType] || 0) + 1;
+    const type = order.cylinderType || 'domestic';
+    typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
   });
 
   return {
-    totalRevenue,
     totalOrders,
-    avgOrderValue,
-    statusCounts,
-    typeCounts
+    totalRevenue,
+    avgOrder,
+    statusBreakdown,
+    typeBreakdown
   };
 }
 
 /**
- * Render analytics
+ * Render stats cards
  */
-function renderAnalytics() {
-  const analytics = calculateAnalytics();
-  
+function renderStats(filtered) {
+  const stats = calculateStats(filtered);
+
   // Update stat cards
-  document.getElementById('history-total-revenue').textContent = formatCurrency(analytics.totalRevenue);
-  document.getElementById('history-total-orders').textContent = analytics.totalOrders;
-  document.getElementById('history-avg-order').textContent = formatCurrency(analytics.avgOrderValue);
-  
+  const totalRevenueEl = document.getElementById('history-total-revenue');
+  const totalOrdersEl = document.getElementById('history-total-orders');
+  const avgOrderEl = document.getElementById('history-avg-order');
+
+  if (totalRevenueEl) totalRevenueEl.textContent = formatCurrency(stats.totalRevenue);
+  if (totalOrdersEl) totalOrdersEl.textContent = stats.totalOrders;
+  if (avgOrderEl) avgOrderEl.textContent = formatCurrency(stats.avgOrder);
+
   // Render status breakdown
-  const statusBreakdown = document.getElementById('status-breakdown');
-  statusBreakdown.innerHTML = Object.entries(analytics.statusCounts).map(([status, count]) => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-light);">
-      <span class="admin-badge ${getStatusBadgeClass(status)}">${status}</span>
-      <strong>${count}</strong>
-    </div>
-  `).join('');
-  
+  const statusBreakdownEl = document.getElementById('status-breakdown');
+  if (statusBreakdownEl) {
+    const statusLabels = {
+      'pending': 'Pending',
+      'confirmed': 'Confirmed',
+      'in-transit': 'In Transit',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled'
+    };
+
+    statusBreakdownEl.innerHTML = Object.entries(stats.statusBreakdown)
+      .map(([status, count]) => `
+        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+          <span style="color: var(--text-700);">${statusLabels[status] || status}</span>
+          <strong style="color: var(--text-900);">${count}</strong>
+        </div>
+      `).join('') || '<div style="padding: 1rem; color: var(--text-500); text-align: center;">No data</div>';
+  }
+
   // Render type breakdown
-  const typeBreakdown = document.getElementById('type-breakdown');
-  typeBreakdown.innerHTML = Object.entries(analytics.typeCounts).map(([type, count]) => `
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-light);">
-      <span style="text-transform: capitalize;">${type}</span>
-      <strong>${count}</strong>
-    </div>
-  `).join('');
+  const typeBreakdownEl = document.getElementById('type-breakdown');
+  if (typeBreakdownEl) {
+    const typeLabels = {
+      'domestic': 'Domestic',
+      'commercial': 'Commercial'
+    };
+
+    typeBreakdownEl.innerHTML = Object.entries(stats.typeBreakdown)
+      .map(([type, count]) => `
+        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+          <span style="color: var(--text-700);">${typeLabels[type] || type}</span>
+          <strong style="color: var(--text-900);">${count}</strong>
+        </div>
+      `).join('') || '<div style="padding: 1rem; color: var(--text-500); text-align: center;">No data</div>';
+  }
+}
+
+/**
+ * Get status badge class
+ */
+function getStatusBadgeClass(status) {
+  const statusMap = {
+    'pending': 'admin-badge--pending',
+    'confirmed': 'admin-badge--confirmed',
+    'in-transit': 'admin-badge--in-transit',
+    'delivered': 'admin-badge--delivered',
+    'cancelled': 'admin-badge--cancelled'
+  };
+  return statusMap[status] || 'admin-badge--pending';
 }
 
 /**
@@ -208,13 +285,21 @@ function renderAnalytics() {
  */
 function renderHistory() {
   const tableBody = document.getElementById('history-table-body');
+  if (!tableBody) {
+    console.error('Table body element not found: history-table-body');
+    return;
+  }
+
   const filtered = filterHistory();
+
+  // Update stats
+  renderStats(filtered);
 
   if (filtered.length === 0) {
     tableBody.innerHTML = `
       <tr>
         <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
-          No orders found matching your filters.
+          ${currentHistory.length === 0 ? 'No order history found. History will appear here when orders are delivered or cancelled.' : 'No orders found matching your filters.'}
         </td>
       </tr>
     `;
@@ -222,6 +307,7 @@ function renderHistory() {
   }
 
   tableBody.innerHTML = filtered.map(order => {
+<<<<<<< HEAD
     const orderId = order.id || 'N/A';
     const customerName = order.customerName || 'N/A';
     const phone = order.phone || 'N/A';
@@ -285,22 +371,25 @@ function renderHistory() {
       btn.textContent = isOpen ? 'Less' : 'More';
     });
   });
+=======
+    const status = order.status || 'pending';
+    const cylinderType = order.cylinderType ? order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1) : 'N/A';
+    
+    return `
+      <tr>
+        <td><strong>#${order.id}</strong></td>
+        <td>${order.customerName}</td>
+        <td>${order.phone}</td>
+        <td>${cylinderType}</td>
+        <td>${order.quantity}</td>
+        <td><strong>${formatCurrency(order.total)}</strong></td>
+        <td><span class="admin-badge ${getStatusBadgeClass(status)}">${status}</span></td>
+        <td>${formatDate(order.createdAt)}</td>
+      </tr>
+    `;
+  }).join('');
+>>>>>>> 7f425a9 (backend completed)
 }
-
-/**
- * Export orders (mock - placeholder)
- */
-window.exportOrders = function() {
-  const filtered = filterHistory();
-  
-  if (filtered.length === 0) {
-    alert('No orders to export');
-    return;
-  }
-  
-  // In production: GET /api/admin/orders/export?dateFrom=...&dateTo=...
-  alert(`Export functionality will be available when backend is integrated.\n\nWould export ${filtered.length} orders.`);
-};
 
 /**
  * Initialize history page
@@ -311,32 +400,50 @@ export async function initHistory() {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
+<<<<<<< HEAD
         <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
           Loading order history...
+=======
+        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
+          Loading history...
+>>>>>>> 7f425a9 (backend completed)
         </td>
       </tr>
     `;
   }
 
-  // Fetch orders from backend
-  await fetchHistory();
+  // Fetch history from backend
+  try {
+    await fetchHistory();
+    renderHistory();
+  } catch (error) {
+    console.error('Failed to initialize history page:', error);
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: var(--color-danger);">
+            Failed to load history: ${error.message}
+          </td>
+        </tr>
+      `;
+    }
+  }
 
-  // Date filters
+  // Date from filter
   const dateFromInput = document.getElementById('history-date-from');
   if (dateFromInput) {
     dateFromInput.addEventListener('change', (e) => {
       currentFilters.dateFrom = e.target.value;
       renderHistory();
-      renderAnalytics();
     });
   }
 
+  // Date to filter
   const dateToInput = document.getElementById('history-date-to');
   if (dateToInput) {
     dateToInput.addEventListener('change', (e) => {
       currentFilters.dateTo = e.target.value;
       renderHistory();
-      renderAnalytics();
     });
   }
 
@@ -346,74 +453,25 @@ export async function initHistory() {
     statusFilter.addEventListener('change', (e) => {
       currentFilters.status = e.target.value;
       renderHistory();
-      renderAnalytics();
     });
   }
 
-  // Clear filters
+  // Clear filters button
   const clearFiltersBtn = document.getElementById('history-clear-filters');
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', async () => {
+    clearFiltersBtn.addEventListener('click', () => {
       currentFilters = {
+        status: 'all',
+        search: '',
         dateFrom: '',
-        dateTo: '',
-        status: 'all'
+        dateTo: ''
       };
       if (dateFromInput) dateFromInput.value = '';
       if (dateToInput) dateToInput.value = '';
       if (statusFilter) statusFilter.value = 'all';
-      await fetchHistory();
       renderHistory();
-      renderAnalytics();
     });
   }
-
-  // Export button
-  const exportBtn = document.getElementById('history-export-btn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', exportOrders);
-  }
-
-  // Refresh button (if exists)
-  const refreshBtn = document.getElementById('history-refresh');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', async () => {
-      await fetchHistory();
-      renderHistory();
-      renderAnalytics();
-      showNotification('Order history refreshed', 'success');
-    });
-  }
-
-  // Initial render
-  renderHistory();
-  renderAnalytics();
-}
-
-/**
- * Show notification
- */
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    position: fixed;
-    top: 2rem;
-    right: 2rem;
-    padding: 1rem 1.5rem;
-    background: ${type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe'};
-    color: ${type === 'success' ? '#065f46' : type === 'error' ? '#991b1b' : '#1e40af'};
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    z-index: 2000;
-    animation: slideIn 0.3s var(--ease-out);
-  `;
-  notification.textContent = message;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s var(--ease-out)';
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
 }
 
 // Auto-initialize
@@ -422,4 +480,3 @@ if (document.readyState === 'loading') {
 } else {
   initHistory();
 }
-

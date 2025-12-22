@@ -132,6 +132,69 @@ const validateMessage = [
 
 module.exports = {
   validateOrder,
-  validateMessage
+  validateMessage,
+  /**
+   * Validation rules for simple order endpoint (/api/order)
+   * Uses `name` instead of `customerName`.
+   */
+  validateSimpleOrder: [
+    body('name')
+      .trim()
+      .notEmpty().withMessage('Name is required')
+      .isLength({ min: 2, max: 100 }).withMessage('Name must be between 2 and 100 characters')
+      .escape(),
+
+    body('phone')
+      .trim()
+      .notEmpty().withMessage('Phone number is required')
+      .customSanitizer(sanitizePhone)
+      .isLength({ min: 7 }).withMessage('Phone number must be at least 7 digits')
+      .isNumeric().withMessage('Phone number must contain only digits'),
+
+    body('address')
+      .trim()
+      .notEmpty().withMessage('Address is required')
+      .isLength({ min: 10 }).withMessage('Address must be at least 10 characters')
+      .escape(),
+
+    body('cylinderType')
+      .trim()
+      .notEmpty().withMessage('Cylinder type is required')
+      .isIn(['Domestic', 'Commercial']).withMessage('Cylinder type must be Domestic or Commercial'),
+
+    body('quantity')
+      .notEmpty().withMessage('Quantity is required')
+      .customSanitizer((value) => {
+        if (typeof value === 'string') {
+          const num = parseInt(value, 10);
+          return isNaN(num) ? value : num;
+        }
+        return value;
+      })
+      .isInt({ min: 1, max: 999 }).withMessage('Quantity must be an integer between 1 and 999'),
+
+    body('couponCode')
+      .optional()
+      .trim()
+      .isLength({ max: 50 }).withMessage('Coupon code must be at most 50 characters')
+      .customSanitizer((value) => value ? value.toUpperCase() : value),
+
+    // Reject unknown fields
+    (req, res, next) => {
+      const allowedFields = ['name', 'phone', 'address', 'cylinderType', 'quantity', 'couponCode'];
+      const receivedFields = Object.keys(req.body || {});
+      const unknownFields = receivedFields.filter(field => !allowedFields.includes(field));
+
+      if (unknownFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Unknown fields: ${unknownFields.join(', ')}`
+        });
+      }
+      next();
+    },
+
+    handleValidationErrors
+  ],
 };
 

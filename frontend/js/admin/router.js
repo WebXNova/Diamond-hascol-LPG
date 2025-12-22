@@ -1,9 +1,10 @@
 /**
  * Admin Router Module
- * Handles route protection and navigation
+ * STRICT MODE: Blocks access immediately, before any content loads
+ * Multiple layers of protection to prevent unauthorized access
  */
 
-import { isAuthenticated } from './auth.js';
+import { isAuthenticated, verifyToken } from './auth.js';
 
 const ADMIN_BASE_PATH = '/admin';
 const LOGIN_PATH = `${ADMIN_BASE_PATH}/login.html`;
@@ -16,7 +17,9 @@ const PROTECTED_ROUTES = [
   'orders.html',
   'messages.html',
   'coupons.html',
-  'history.html'
+  'history.html',
+  'products.html',
+  'settings.html'
 ];
 
 /**
@@ -37,26 +40,82 @@ function isLoginPage() {
 }
 
 /**
- * Initialize route protection
- * Redirects to login if not authenticated on protected routes
+ * Strict redirect - uses replace to prevent back button
  */
-export function initRouter() {
+function strictRedirect(path) {
+  window.location.replace(path);
+}
+
+/**
+ * Hide page content immediately
+ */
+function hideContent() {
+  if (document.body) {
+    document.body.style.display = 'none';
+  }
+  if (document.documentElement) {
+    document.documentElement.style.visibility = 'hidden';
+  }
+}
+
+/**
+ * Show page content
+ */
+function showContent() {
+  if (document.body) {
+    document.body.style.display = '';
+  }
+  if (document.documentElement) {
+    document.documentElement.style.visibility = '';
+  }
+}
+
+/**
+ * Initialize route protection
+ * STRICT: Blocks immediately, verifies with backend
+ */
+export async function initRouter() {
   // Skip protection on login page
   if (isLoginPage()) {
     // If already authenticated, redirect to dashboard
     if (isAuthenticated()) {
-      window.location.href = `${ADMIN_BASE_PATH}/dashboard.html`;
+      strictRedirect(`${ADMIN_BASE_PATH}/dashboard.html`);
+      return false;
     }
-    return;
+    return true;
   }
 
-  // Protect all other admin routes
-  if (isProtectedRoute() && !isAuthenticated()) {
-    window.location.href = LOGIN_PATH;
-    return;
+  // Protect all other admin routes - IMMEDIATE CHECK
+  if (isProtectedRoute()) {
+    // Hide content immediately while checking
+    hideContent();
+    
+    // First check: Does session exist?
+    if (!isAuthenticated()) {
+      // No session - immediate redirect (no delay)
+      strictRedirect(LOGIN_PATH);
+      return false;
+    }
+
+    // Second check: Verify token with backend (async but blocking)
+    try {
+      const verification = await verifyToken();
+      if (!verification.success) {
+        // Token invalid - redirect immediately
+        strictRedirect(LOGIN_PATH);
+        return false;
+      }
+      // Token valid - show content
+      showContent();
+      return true;
+    } catch (error) {
+      // Network error or verification failed - require re-auth
+      strictRedirect(LOGIN_PATH);
+      return false;
+    }
   }
 
-  // Route is protected and user is authenticated
+  // Not a protected route - allow
   return true;
 }
 
@@ -65,7 +124,7 @@ export function initRouter() {
  */
 export function navigateTo(page) {
   if (!isAuthenticated() && page !== 'login.html') {
-    window.location.href = LOGIN_PATH;
+    strictRedirect(LOGIN_PATH);
     return;
   }
 
@@ -75,12 +134,12 @@ export function navigateTo(page) {
 /**
  * Logout and redirect to login
  */
-export function logout() {
-  const { clearSession } = window.AdminAuth || {};
-  if (clearSession) {
-    clearSession();
+export async function logout() {
+  const { logout: logoutFn } = window.AdminAuth || {};
+  if (logoutFn) {
+    await logoutFn();
   }
-  window.location.href = LOGIN_PATH;
+  strictRedirect(LOGIN_PATH);
 }
 
 // Expose globally
@@ -90,10 +149,27 @@ window.AdminRouter = {
   logout
 };
 
-// Auto-initialize on page load
+// STRICT: Run immediately, don't wait for DOM
+// Hide content first, then check auth
+hideContent();
+
+(async function() {
+  const allowed = await initRouter();
+  
+  // If not allowed, content stays hidden (redirect will happen)
+  if (allowed) {
+    showContent();
+  }
+})();
+
+// Also run on DOM ready as backup
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initRouter);
+  document.addEventListener('DOMContentLoaded', async () => {
+    const allowed = await initRouter();
+    if (!allowed) {
+      hideContent();
+    }
+  });
 } else {
   initRouter();
 }
-

@@ -2544,6 +2544,52 @@ body.order-sidecard-open {
 }
 
 /* ============================================
+   OUT OF STOCK PRODUCT STYLING
+   ============================================ */
+.product-card--out-of-stock {
+    position: relative;
+    opacity: 0.7;
+    filter: grayscale(0.3);
+    pointer-events: auto; /* Allow clicking for view details */
+}
+
+.product-card--out-of-stock .product-image img {
+    filter: grayscale(100%);
+    opacity: 0.6;
+}
+
+.product-out-of-stock-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #dc2626;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.product-card--out-of-stock .product-card__actions .btn {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.product-card--out-of-stock .product-card__actions .btn:disabled {
+    background: #9ca3af;
+    border-color: #9ca3af;
+    color: white;
+}
+
+.btn--disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+/* ============================================
    REFILLING PRODUCT CARD LAYOUT (Side-by-side)
    ============================================ */
 .product-card--refilling {

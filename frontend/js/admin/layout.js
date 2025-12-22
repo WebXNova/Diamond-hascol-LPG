@@ -3,8 +3,8 @@
  * Handles sidebar navigation, header, and layout initialization
  */
 
-import { getCurrentAdmin, logout } from './auth.js';
-import { navigateTo } from './router.js';
+import { getCurrentAdmin } from './auth.js';
+import { navigateTo, logout } from './router.js';
 
 /**
  * Initialize admin layout
