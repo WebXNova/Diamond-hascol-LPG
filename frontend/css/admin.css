@@ -157,6 +157,106 @@
   gap: 1rem;
 }
 
+.admin-header__messages-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-header__messages-filter {
+  padding: 0.75rem 1.5rem;
+  font-size: var(--fs-1);
+  font-weight: 600;
+  min-height: auto;
+  min-width: auto;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  color: var(--text-900);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.admin-header__messages-filter:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.admin-header__messages-filter:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.admin-header__messages-btn {
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.admin-header__nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-header__nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  border-radius: 8px;
+  font-size: var(--fs-1);
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+  min-height: 40px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.admin-header__nav-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke-width: 2.2;
+}
+
+.admin-header__nav-btn--primary {
+  background: linear-gradient(135deg, var(--color-brand) 0%, var(--color-brand-2) 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(11, 74, 166, 0.2);
+}
+
+.admin-header__nav-btn--primary:hover {
+  background: linear-gradient(135deg, var(--color-brand-2) 0%, var(--color-brand) 100%);
+  box-shadow: 0 4px 12px rgba(11, 74, 166, 0.3);
+  transform: translateY(-1px);
+}
+
+.admin-header__nav-btn--secondary {
+  background: rgba(11, 74, 166, 0.06);
+  color: var(--color-brand);
+  border: 1px solid rgba(11, 74, 166, 0.15);
+}
+
+.admin-header__nav-btn--secondary:hover {
+  background: rgba(11, 74, 166, 0.1);
+  border-color: rgba(11, 74, 166, 0.25);
+  transform: translateY(-1px);
+}
+
 .admin-user {
   display: flex;
   align-items: center;
@@ -518,6 +618,152 @@
   border-bottom: none;
 }
 
+/* Dashboard Recent Orders: responsive "More" expansion for phone + 1024px */
+.admin-table__more-col {
+  display: none;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.admin-table__more-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.875rem;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  color: var(--text-900);
+  font-weight: 600;
+  font-size: var(--fs-0);
+  min-height: 40px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.admin-table__more-btn:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+  border-color: rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.admin-table__details-row {
+  display: none;
+}
+
+.admin-table__details-row.is-open {
+  display: table-row;
+}
+
+.admin-table__details-row td {
+  padding: 1rem 1.25rem;
+  background: rgba(11, 74, 166, 0.03);
+}
+
+.admin-table__details {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-table__details-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-table__details-label {
+  font-size: 0.75rem;
+  color: var(--text-500);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-table__details-value {
+  color: var(--text-900);
+  font-weight: 600;
+  font-size: var(--fs-1);
+}
+
+@media (max-width: 1024px) {
+  /* Only apply to the dashboard recent orders table */
+  .admin-table--recent-orders .admin-table__more-col {
+    display: table-cell;
+  }
+
+  .admin-table--recent-orders .admin-table__more-btn {
+    display: inline-flex;
+  }
+
+  /* Show 4 columns: Order ID, Customer, Total, Status (+ More) */
+  .admin-table--recent-orders th:nth-child(3),
+  .admin-table--recent-orders td:nth-child(3),
+  .admin-table--recent-orders th:nth-child(4),
+  .admin-table--recent-orders td:nth-child(4),
+  .admin-table--recent-orders th:nth-child(7),
+  .admin-table--recent-orders td:nth-child(7) {
+    display: none;
+  }
+
+  .admin-table--recent-orders .admin-table__details {
+    grid-template-columns: 1fr;
+  }
+
+  /* Coupons: compact columns + More (same mechanism as dashboard) */
+  .admin-table--coupons .admin-table__more-col {
+    display: table-cell;
+  }
+
+  .admin-table--coupons .admin-table__more-btn {
+    display: inline-flex;
+  }
+
+  /* Show 4 columns: Code, Value, Status, Expires (+ More) */
+  .admin-table--coupons th:nth-child(3),
+  .admin-table--coupons td:nth-child(3),
+  .admin-table--coupons th:nth-child(4),
+  .admin-table--coupons td:nth-child(4),
+  .admin-table--coupons th:nth-child(5),
+  .admin-table--coupons td:nth-child(5),
+  .admin-table--coupons th:nth-child(7),
+  .admin-table--coupons td:nth-child(7),
+  .admin-table--coupons th:nth-child(9),
+  .admin-table--coupons td:nth-child(9) {
+    display: none;
+  }
+
+  /* Vertical details on small screens (like dashboard) */
+  .admin-table--coupons .admin-table__details {
+    grid-template-columns: 1fr;
+  }
+
+  /* History: compact columns + More (same mechanism as dashboard) */
+  .admin-table--history .admin-table__more-col {
+    display: table-cell;
+  }
+
+  .admin-table--history .admin-table__more-btn {
+    display: inline-flex;
+  }
+
+  /* Show 4 columns: Order ID, Customer, Total, Status (+ More) */
+  .admin-table--history th:nth-child(3),
+  .admin-table--history td:nth-child(3),
+  .admin-table--history th:nth-child(4),
+  .admin-table--history td:nth-child(4),
+  .admin-table--history th:nth-child(5),
+  .admin-table--history td:nth-child(5),
+  .admin-table--history th:nth-child(8),
+  .admin-table--history td:nth-child(8) {
+    display: none;
+  }
+
+  .admin-table--history .admin-table__details {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Status Badges */
 .admin-badge {
   display: inline-flex;
@@ -795,13 +1041,20 @@
   background: rgba(0, 0, 0, 0.6);
   z-index: 99;
   opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  visibility: hidden;
+  transition:
+    opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.25s;
   pointer-events: none;
   backdrop-filter: blur(4px);
 }
 
 .admin-sidebar-backdrop.show {
   opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0s;
   pointer-events: auto;
 }
 
@@ -850,6 +1103,7 @@
     max-width: 85vw;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    will-change: transform;
   }
 
   .admin-sidebar.open {
@@ -905,17 +1159,63 @@
     width: 100%;
   }
 
+  /* On mobile: show admin user (name/email) first, top-left */
+  .admin-header__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-header__nav-buttons {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .admin-header__nav-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+
   .admin-header__actions > *:not(.admin-user) {
     width: 100%;
   }
 
-  .admin-user {
+  .admin-header__messages-actions {
     width: 100%;
-    justify-content: space-between;
-    padding: 0.875rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .admin-header__messages-filter {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .admin-header__messages-btn {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .admin-user {
+    /* Put user block in the top row next to the hamburger (3-line) button */
+    position: fixed;
+    top: 0.75rem;
+    left: calc(0.75rem + 56px);
+    right: 0.75rem;
+    z-index: 199;
+
+    width: auto;
+    order: 0; /* handled by fixed positioning */
+    justify-content: flex-start;
+    padding: 0.5rem 0.75rem;
     background: rgba(11, 74, 166, 0.06);
-    border-radius: 12px;
-    margin-top: 0.5rem;
+    border-radius: 10px;
+    margin-top: 0;
   }
 
   .admin-user__info {
@@ -923,11 +1223,11 @@
   }
 
   .admin-user__name {
-    font-size: var(--fs-1);
+    font-size: var(--fs-0);
   }
 
   .admin-user__email {
-    font-size: var(--fs-0);
+    font-size: 0.75rem;
   }
 
   /* Content */
@@ -1137,7 +1437,7 @@
     min-width: 0;
   }
 
-  /* Messages filter and actions */
+  /* Messages filter and actions - styles already defined above */
   .admin-header__actions select {
     flex: 1;
     min-width: 0;
@@ -1185,6 +1485,40 @@
   .admin-form-row {
     grid-template-columns: 1fr;
   }
+
+  .admin-header__nav-buttons {
+    gap: 0.625rem;
+  }
+
+  .admin-header__nav-btn {
+    padding: 0.5625rem 0.9375rem;
+    font-size: var(--fs-0);
+    min-height: 38px;
+  }
+
+  .admin-header__nav-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-header__messages-actions {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .admin-header__messages-filter {
+    min-width: 180px;
+    flex: 1;
+    min-height: 42px;
+    font-size: var(--fs-0);
+  }
+
+  .admin-header__messages-btn {
+    min-height: 42px;
+    padding: 0.625rem 1.25rem;
+    font-size: var(--fs-0);
+    white-space: nowrap;
+  }
 }
 
 /* Mini Laptop / Small Desktop (1024px - 1366px) */
@@ -1204,6 +1538,39 @@
   .admin-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 1.75rem;
+  }
+
+  .admin-header__messages-actions {
+    gap: 1rem;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .admin-header__messages-filter {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+    /* Keep it compact at 1024px (avoid stretching wide) */
+    width: 160px !important;
+    max-width: 160px !important;
+    padding: 0.625rem 1.25rem !important; /* match button */
+    font-size: var(--fs-1) !important;
+    font-weight: 600 !important;
+    flex: 0 0 auto !important;
+    height: 42px;
+    min-height: 42px;
+    line-height: 1.2;
+    /* Keep arrow without adding extra right padding */
+    background-position: right 0.75rem center;
+    background-size: 12px 12px;
+    padding-right: 1.25rem !important; /* match button */
+  }
+
+  .admin-header__messages-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: var(--fs-1);
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
 
   .admin-stat-card {
@@ -1237,6 +1604,21 @@
 
   .admin-header__title {
     font-size: var(--fs-3);
+  }
+
+  .admin-header__nav-buttons {
+    gap: 0.625rem;
+  }
+
+  .admin-header__nav-btn {
+    padding: 0.625rem 1rem;
+    font-size: var(--fs-0);
+    min-height: 40px;
+  }
+
+  .admin-header__nav-btn svg {
+    width: 17px;
+    height: 17px;
   }
 }
 
@@ -1395,6 +1777,46 @@
 
   .admin-table tbody tr {
     min-height: 56px;
+  }
+}
+
+/* Orders table: hide extra columns on phone/1024px, show More button */
+.admin-order-more-btn {
+  display: none;
+}
+
+.admin-order-delete-btn {
+  display: inline-flex;
+}
+
+@media (max-width: 1024px) {
+  .admin-table th.admin-table__col-extra,
+  .admin-table td.admin-table__col-extra {
+    display: none;
+  }
+
+  .admin-table th.admin-table__col-actions,
+  .admin-table td.admin-table__col-actions {
+    display: table-cell;
+  }
+
+  .admin-order-delete-btn {
+    display: none !important;
+  }
+
+  .admin-order-more-btn {
+    display: inline-flex !important;
+  }
+}
+
+/* Desktop: show all columns, hide More button, show Delete */
+@media (min-width: 1025px) {
+  .admin-order-more-btn {
+    display: none !important;
+  }
+
+  .admin-order-delete-btn {
+    display: inline-flex !important;
   }
 }
 

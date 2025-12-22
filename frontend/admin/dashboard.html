@@ -116,7 +116,7 @@
                             Recent Orders
                         </h2>
                     </div>
-                    <table class="admin-table">
+                    <table class="admin-table admin-table--recent-orders">
                         <thead>
                             <tr>
                                 <th>Order ID</th>
@@ -126,19 +126,13 @@
                                 <th>Total</th>
                                 <th>Status</th>
                                 <th>Date</th>
+                                <th class="admin-table__more-col">More</th>
                             </tr>
                         </thead>
                         <tbody id="recent-orders-table">
                             <!-- Orders will be populated by JavaScript -->
                         </tbody>
                     </table>
-                </div>
-
-                <!-- Quick Actions -->
-                <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                    <a href="orders.html" class="admin-btn admin-btn--primary">View All Orders</a>
-                    <a href="messages.html" class="admin-btn admin-btn--secondary">View Messages</a>
-                    <a href="coupons.html" class="admin-btn admin-btn--secondary">Manage Coupons</a>
                 </div>
             </main>
         </div>
@@ -279,21 +273,70 @@
             const recentOrders = orders.slice(0, 5);
 
             if (recentOrders.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-500);">No recent orders</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">No recent orders</td></tr>';
                 return;
             }
 
-            tableBody.innerHTML = recentOrders.map(order => `
-                <tr>
-                    <td><strong>#${order.id}</strong></td>
-                    <td>${order.customerName}</td>
-                    <td>${order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)}</td>
-                    <td>${order.quantity}</td>
-                    <td><strong>${formatCurrency(order.total)}</strong></td>
-                    <td><span class="admin-badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
-                    <td>${formatDate(order.createdAt)}</td>
-                </tr>
-            `).join('');
+            tableBody.innerHTML = recentOrders.map(order => {
+                const orderId = order.id ?? 'N/A';
+                const customerName = order.customerName ?? 'N/A';
+                const cylinderType = order.cylinderType
+                    ? order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)
+                    : 'N/A';
+                const quantity = order.quantity ?? 'N/A';
+                const total = order.total ?? 0;
+                const status = order.status ?? 'pending';
+                const createdAt = order.createdAt ? formatDate(order.createdAt) : 'N/A';
+
+                return `
+                    <tr class="admin-table__main-row" data-order-id="${orderId}">
+                        <td><strong>#${orderId}</strong></td>
+                        <td>${customerName}</td>
+                        <td>${cylinderType}</td>
+                        <td>${quantity}</td>
+                        <td><strong>${formatCurrency(total)}</strong></td>
+                        <td><span class="admin-badge ${getStatusBadgeClass(status)}">${status}</span></td>
+                        <td>${createdAt}</td>
+                        <td class="admin-table__more-col">
+                            <button type="button" class="admin-table__more-btn" data-order-id="${orderId}" aria-expanded="false">
+                                More
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="admin-table__details-row" data-order-id="${orderId}" aria-hidden="true">
+                        <td colspan="8">
+                            <div class="admin-table__details">
+                                <div class="admin-table__details-item">
+                                    <span class="admin-table__details-label">Type</span>
+                                    <span class="admin-table__details-value">${cylinderType}</span>
+                                </div>
+                                <div class="admin-table__details-item">
+                                    <span class="admin-table__details-label">Quantity</span>
+                                    <span class="admin-table__details-value">${quantity}</span>
+                                </div>
+                                <div class="admin-table__details-item">
+                                    <span class="admin-table__details-label">Date</span>
+                                    <span class="admin-table__details-value">${createdAt}</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Toggle "More" details (only shown on <=1024px via CSS)
+            tableBody.querySelectorAll('.admin-table__more-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-order-id');
+                    const detailsRow = tableBody.querySelector(`.admin-table__details-row[data-order-id="${id}"]`);
+                    if (!detailsRow) return;
+
+                    const isOpen = detailsRow.classList.toggle('is-open');
+                    detailsRow.setAttribute('aria-hidden', String(!isOpen));
+                    btn.setAttribute('aria-expanded', String(isOpen));
+                    btn.textContent = isOpen ? 'Less' : 'More';
+                });
+            });
         }
 
         // Initialize dashboard

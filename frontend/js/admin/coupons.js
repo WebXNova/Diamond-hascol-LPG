@@ -95,7 +95,7 @@ function renderCoupons() {
   if (currentCoupons.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
+        <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-500);">
           No coupons found. Create your first coupon!
         </td>
       </tr>
@@ -107,40 +107,100 @@ function renderCoupons() {
     const expired = isExpired(coupon.expiresAt);
     const usagePercent = (coupon.usageCount / coupon.usageLimit) * 100;
 
+    const typeLabel = coupon.type === 'percentage' ? 'Percentage' : 'Fixed Amount';
+    const minPurchaseLabel = coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString()}` : 'None';
+    const maxDiscountLabel = coupon.maxDiscount > 0 ? `₨${coupon.maxDiscount.toLocaleString()}` : 'Unlimited';
+    const statusLabel = expired ? 'Expired' : coupon.isActive ? 'Active' : 'Inactive';
+    const statusClass = expired ? 'admin-badge--cancelled' : coupon.isActive ? 'admin-badge--delivered' : 'admin-badge--pending';
+    const expiresLabel = formatDate(coupon.expiresAt);
+
+    const usageMarkup = `
+      <div style="font-size: var(--fs-0);">
+        <div>${coupon.usageCount} / ${coupon.usageLimit}</div>
+        <div style="width: 100px; height: 4px; background: var(--bg-2); border-radius: 2px; margin-top: 0.25rem; overflow: hidden;">
+          <div style="width: ${Math.min(usagePercent, 100)}%; height: 100%; background: var(--color-brand); transition: width 0.3s;"></div>
+        </div>
+      </div>
+    `;
+
+    const actionsMarkup = `
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="admin-btn admin-btn--secondary" onclick="editCoupon('${coupon.id}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+          Edit
+        </button>
+        <button class="admin-btn admin-btn--danger" onclick="deleteCoupon('${coupon.id}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+          Delete
+        </button>
+      </div>
+    `;
+
     return `
-      <tr>
+      <tr class="admin-table__main-row" data-coupon-id="${coupon.id}">
         <td><strong>${coupon.code}</strong></td>
         <td>${formatCouponValue(coupon)}</td>
-        <td>${coupon.type === 'percentage' ? 'Percentage' : 'Fixed Amount'}</td>
-        <td>${coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString()}` : 'None'}</td>
-        <td>${coupon.maxDiscount > 0 ? `₨${coupon.maxDiscount.toLocaleString()}` : 'Unlimited'}</td>
+        <td>${typeLabel}</td>
+        <td>${minPurchaseLabel}</td>
+        <td>${maxDiscountLabel}</td>
         <td>
-          <span class="admin-badge ${expired ? 'admin-badge--cancelled' : coupon.isActive ? 'admin-badge--delivered' : 'admin-badge--pending'}">
-            ${expired ? 'Expired' : coupon.isActive ? 'Active' : 'Inactive'}
+          <span class="admin-badge ${statusClass}">
+            ${statusLabel}
           </span>
         </td>
-        <td>
-          <div style="font-size: var(--fs-0);">
-            <div>${coupon.usageCount} / ${coupon.usageLimit}</div>
-            <div style="width: 100px; height: 4px; background: var(--bg-2); border-radius: 2px; margin-top: 0.25rem; overflow: hidden;">
-              <div style="width: ${Math.min(usagePercent, 100)}%; height: 100%; background: var(--color-brand); transition: width 0.3s;"></div>
-            </div>
-          </div>
+        <td>${usageMarkup}</td>
+        <td>${expiresLabel}</td>
+        <td>${actionsMarkup}</td>
+        <td class="admin-table__more-col">
+          <button type="button" class="admin-table__more-btn" data-coupon-id="${coupon.id}" aria-expanded="false">
+            More
+          </button>
         </td>
-        <td>${formatDate(coupon.expiresAt)}</td>
-        <td>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="admin-btn admin-btn--secondary" onclick="editCoupon('${coupon.id}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-              Edit
-            </button>
-            <button class="admin-btn admin-btn--danger" onclick="deleteCoupon('${coupon.id}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-              Delete
-            </button>
+      </tr>
+      <tr class="admin-table__details-row" data-coupon-id="${coupon.id}" aria-hidden="true">
+        <td colspan="10">
+          <div class="admin-table__details">
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Type</span>
+              <span class="admin-table__details-value">${typeLabel}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Min Purchase</span>
+              <span class="admin-table__details-value">${minPurchaseLabel}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Max Discount</span>
+              <span class="admin-table__details-value">${maxDiscountLabel}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Usage</span>
+              <span class="admin-table__details-value">${coupon.usageCount} / ${coupon.usageLimit}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Expires</span>
+              <span class="admin-table__details-value">${expiresLabel}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Actions</span>
+              <span class="admin-table__details-value">${actionsMarkup}</span>
+            </div>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+
+  // Toggle "More" details (shown on <=1024px via CSS)
+  tableBody.querySelectorAll('.admin-table__more-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-coupon-id');
+      const detailsRow = tableBody.querySelector(`.admin-table__details-row[data-coupon-id="${id}"]`);
+      if (!detailsRow) return;
+
+      const isOpen = detailsRow.classList.toggle('is-open');
+      detailsRow.setAttribute('aria-hidden', String(!isOpen));
+      btn.setAttribute('aria-expanded', String(isOpen));
+      btn.textContent = isOpen ? 'Less' : 'More';
+    });
+  });
 }
 
 /**

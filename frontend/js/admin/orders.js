@@ -182,13 +182,13 @@ function renderOrders() {
     
     return `
     <tr>
-      <td><strong>#${orderId}</strong></td>
-      <td>${customerName}</td>
-      <td>${phone}</td>
-      <td>${cylinderType}</td>
-      <td>${quantity}</td>
-      <td><strong>${formatCurrency(total)}</strong></td>
-      <td>
+      <td class="admin-table__col-main"><strong>#${orderId}</strong></td>
+      <td class="admin-table__col-main">${customerName}</td>
+      <td class="admin-table__col-extra">${phone}</td>
+      <td class="admin-table__col-extra">${cylinderType}</td>
+      <td class="admin-table__col-extra">${quantity}</td>
+      <td class="admin-table__col-main"><strong>${formatCurrency(total)}</strong></td>
+      <td class="admin-table__col-main">
         <select class="admin-order-status-select" data-order-id="${orderId}" data-current-status="${status}">
           <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
           <option value="confirmed" ${status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
@@ -196,16 +196,14 @@ function renderOrders() {
           <option value="cancelled" ${status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
         </select>
       </td>
-      <td>${createdAt}</td>
-      <td>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-          <button class="admin-btn admin-btn--secondary" onclick="viewOrderDetails('${orderId}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-            View
-          </button>
-          <button class="admin-btn admin-btn--danger" onclick="deleteOrder('${orderId}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-            Delete
-          </button>
-        </div>
+      <td class="admin-table__col-extra">${createdAt}</td>
+      <td class="admin-table__col-actions">
+        <button class="admin-btn admin-btn--secondary admin-order-more-btn" onclick="viewOrderDetails('${orderId}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+          More
+        </button>
+        <button class="admin-btn admin-btn--danger admin-order-delete-btn" onclick="deleteOrder('${orderId}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
+          Delete
+        </button>
       </td>
     </tr>
   `;
@@ -327,13 +325,6 @@ window.viewOrderDetails = async function(orderId) {
               <span style="color: var(--text-500);">Phone:</span>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span>${order.phone || 'N/A'}</span>
-                ${order.phone ? `
-                <a href="tel:${order.phone}" class="admin-call-btn" title="Call Customer" aria-label="Call Customer">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                  </svg>
-                </a>
-                ` : ''}
               </div>
             </div>
             <div style="display: flex; justify-content: space-between;">
@@ -378,6 +369,17 @@ window.viewOrderDetails = async function(orderId) {
             </div>
           </div>
         </div>
+
+        ${order.phone ? `
+        <div style="padding-top: 0.25rem;">
+          <a href="tel:${order.phone}" class="admin-btn admin-btn--danger" style="width: 100%; justify-content: center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            Call Customer
+          </a>
+        </div>
+        ` : ''}
       </div>
     `;
 

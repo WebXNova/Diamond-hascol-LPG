@@ -44,23 +44,25 @@ function initSidebar() {
   const backdrop = document.querySelector('.admin-sidebar-backdrop');
   
   if (mobileMenuBtn && sidebar) {
-    // Show mobile menu button on mobile
-    if (window.innerWidth <= 768) {
-      mobileMenuBtn.style.display = 'block';
-    }
+    // Let CSS control visibility; JS only controls open/close state
+    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    mobileMenuBtn.setAttribute('aria-controls', 'admin-sidebar');
+    sidebar.setAttribute('id', 'admin-sidebar');
 
-    // Toggle sidebar
-    const toggleSidebar = () => {
-      sidebar.classList.toggle('open');
-      if (backdrop) {
-        backdrop.classList.toggle('show');
+    const setSidebarOpen = (open) => {
+      sidebar.classList.toggle('open', open);
+      if (backdrop) backdrop.classList.toggle('show', open);
+
+      mobileMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      document.body.style.overflow = open ? 'hidden' : '';
+    };
+
+    const toggleSidebar = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
-      // Prevent body scroll when sidebar is open
-      if (sidebar.classList.contains('open')) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = '';
-      }
+      setSidebarOpen(!sidebar.classList.contains('open'));
     };
 
     mobileMenuBtn.addEventListener('click', toggleSidebar);
@@ -68,9 +70,7 @@ function initSidebar() {
     // Close sidebar when clicking backdrop
     if (backdrop) {
       backdrop.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        backdrop.classList.remove('show');
-        document.body.style.overflow = '';
+        setSidebarOpen(false);
       });
     }
 
@@ -78,13 +78,14 @@ function initSidebar() {
     navItems.forEach(item => {
       item.addEventListener('click', () => {
         if (window.innerWidth <= 768) {
-          sidebar.classList.remove('open');
-          if (backdrop) {
-            backdrop.classList.remove('show');
-          }
-          document.body.style.overflow = '';
+          setSidebarOpen(false);
         }
       });
+    });
+
+    // Close sidebar on Escape (mobile and desktop)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
     });
 
     // Handle window resize
@@ -93,14 +94,7 @@ function initSidebar() {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         if (window.innerWidth > 768) {
-          sidebar.classList.remove('open');
-          if (backdrop) {
-            backdrop.classList.remove('show');
-          }
-          document.body.style.overflow = '';
-          mobileMenuBtn.style.display = 'none';
-        } else {
-          mobileMenuBtn.style.display = 'block';
+          setSidebarOpen(false);
         }
       }, 250);
     });

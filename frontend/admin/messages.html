@@ -92,13 +92,13 @@
             <header class="admin-header">
                 <h1 class="admin-header__title">Messages</h1>
                 <div class="admin-header__actions">
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <select id="messages-filter" class="admin-form-input" style="padding: 0.625rem 1rem; font-size: var(--fs-1);">
+                    <div class="admin-header__messages-actions">
+                        <select id="messages-filter" class="admin-form-input admin-header__messages-filter">
                             <option value="all">All Messages</option>
                             <option value="unread">Unread Only</option>
                             <option value="read">Read Only</option>
                         </select>
-                        <button id="messages-mark-all-read" class="admin-btn admin-btn--secondary">
+                        <button id="messages-mark-all-read" class="admin-btn admin-btn--secondary admin-header__messages-btn">
                             Mark All Read
                         </button>
                     </div>

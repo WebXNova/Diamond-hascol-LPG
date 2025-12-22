@@ -213,7 +213,7 @@ function renderHistory() {
   if (filtered.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
+        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
           No orders found matching your filters.
         </td>
       </tr>
@@ -221,18 +221,70 @@ function renderHistory() {
     return;
   }
 
-  tableBody.innerHTML = filtered.map(order => `
-    <tr>
-      <td><strong>${order.id}</strong></td>
-      <td>${order.customerName}</td>
-      <td>${order.phone}</td>
-      <td>${order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)}</td>
-      <td>${order.quantity}</td>
-      <td><strong>${formatCurrency(order.total)}</strong></td>
-      <td><span class="admin-badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
-      <td>${formatDate(order.createdAt)}</td>
-    </tr>
-  `).join('');
+  tableBody.innerHTML = filtered.map(order => {
+    const orderId = order.id || 'N/A';
+    const customerName = order.customerName || 'N/A';
+    const phone = order.phone || 'N/A';
+    const cylinderType = order.cylinderType
+      ? order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)
+      : 'N/A';
+    const quantity = order.quantity ?? 'N/A';
+    const total = order.total ?? 0;
+    const status = order.status || 'pending';
+    const createdAt = order.createdAt ? formatDate(order.createdAt) : 'N/A';
+
+    return `
+      <tr class="admin-table__main-row" data-history-id="${orderId}">
+        <td><strong>${orderId}</strong></td>
+        <td>${customerName}</td>
+        <td>${phone}</td>
+        <td>${cylinderType}</td>
+        <td>${quantity}</td>
+        <td><strong>${formatCurrency(total)}</strong></td>
+        <td><span class="admin-badge ${getStatusBadgeClass(status)}">${status}</span></td>
+        <td>${createdAt}</td>
+        <td class="admin-table__more-col">
+          <button type="button" class="admin-table__more-btn" data-history-id="${orderId}" aria-expanded="false">More</button>
+        </td>
+      </tr>
+      <tr class="admin-table__details-row" data-history-id="${orderId}" aria-hidden="true">
+        <td colspan="9">
+          <div class="admin-table__details">
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Phone</span>
+              <span class="admin-table__details-value">${phone}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Type</span>
+              <span class="admin-table__details-value">${cylinderType}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Quantity</span>
+              <span class="admin-table__details-value">${quantity}</span>
+            </div>
+            <div class="admin-table__details-item">
+              <span class="admin-table__details-label">Date</span>
+              <span class="admin-table__details-value">${createdAt}</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Toggle "More" details (shown on <=1024px via CSS)
+  tableBody.querySelectorAll('.admin-table__more-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-history-id');
+      const detailsRow = tableBody.querySelector(`.admin-table__details-row[data-history-id="${id}"]`);
+      if (!detailsRow) return;
+
+      const isOpen = detailsRow.classList.toggle('is-open');
+      detailsRow.setAttribute('aria-hidden', String(!isOpen));
+      btn.setAttribute('aria-expanded', String(isOpen));
+      btn.textContent = isOpen ? 'Less' : 'More';
+    });
+  });
 }
 
 /**
@@ -259,7 +311,7 @@ export async function initHistory() {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
+        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
           Loading order history...
         </td>
       </tr>
