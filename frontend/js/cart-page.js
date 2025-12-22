@@ -34,79 +34,101 @@
     const itemKey = order.itemId || order.id;
     card.setAttribute('data-order-id', itemKey);
 
+    // Extract all order data from various possible locations
+    const orderId = order.id || order.itemId || '—';
+    const productName = order.productName || order.name || '—';
+    const typeValue = order.type || order.cylinderType || 'domestic';
+    const cylinderTypeDisplay = String(typeValue).toLowerCase() === 'commercial' ? 'Commercial' : 'Domestic';
     const qty = order.quantity || 1;
-    const unitPrice = order.unitPrice || 0;
+    const unitPrice = order.unitPrice || order.unit || 0;
     const subtotal = (unitPrice) * qty;
     const discount = (order.meta && typeof order.meta.discount === 'number') ? order.meta.discount : (order.discount || 0);
     const totalFromMeta = (order.meta && typeof order.meta.finalTotal === 'number') ? order.meta.finalTotal : null;
-    const total = (typeof totalFromMeta === 'number') ? totalFromMeta : (order.totalPrice || order.finalPrice || (subtotal - discount));
+    const total = (typeof totalFromMeta === 'number') ? totalFromMeta : (order.total || order.totalPrice || order.finalPrice || (subtotal - discount));
     const couponCode =
       (order.meta && order.meta.couponCode) ? order.meta.couponCode :
-      (order.couponCode || null);
-    const typeValue = order.type || order.cylinderType || 'domestic';
+      (order.couponCode || order.coupon || null);
+    const customerName = order.customerName || order.name || (order.meta && order.meta.customerName) || '—';
+    const phone = order.phone || (order.meta && order.meta.phone) || '—';
+    const address = order.address || (order.meta && order.meta.address) || '—';
+    const status = order.status || (order.meta && order.meta.status) || 'pending';
+    const createdAt = order.createdAt || (order.meta && order.meta.createdAt) || null;
+
+    // Determine if this is a cart item (can be edited) or a placed order (read-only)
+    const isPlacedOrder = !!order.id && order.id.startsWith('ORD-');
+    const canEdit = !isPlacedOrder;
 
     card.innerHTML = `
       <div class="cart-order-card__header">
         <div class="cart-order-card__title-row">
-          <h3 class="cart-order-card__title">Cart Item</h3>
-          <span class="cart-order-card__date">${order.createdAt ? formatDate(order.createdAt) : '—'}</span>
+          <h3 class="cart-order-card__title">${isPlacedOrder ? 'Order' : 'Cart Item'}</h3>
+          <span class="cart-order-card__date">${createdAt ? formatDate(createdAt) : '—'}</span>
         </div>
-        <button type="button" class="cart-order-card__delete" data-order-id="${itemKey}" aria-label="Remove from cart">×</button>
+        ${canEdit ? `<button type="button" class="cart-order-card__delete" data-order-id="${itemKey}" aria-label="Remove from cart">×</button>` : ''}
       </div>
       <div class="cart-order-card__body">
         <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Product:</span>
-          <span class="cart-order-card__value">${order.productName || order.name || '—'}</span>
+          <span class="cart-order-card__label">Order ID:</span>
+          <span class="cart-order-card__value">${orderId}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Product / Cylinder Name:</span>
+          <span class="cart-order-card__value">${productName}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Cylinder Type:</span>
-          <span class="cart-order-card__value">${String(typeValue).toLowerCase() === 'commercial' ? 'Commercial' : 'Domestic'}</span>
+          <span class="cart-order-card__value">${cylinderTypeDisplay}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Quantity:</span>
           <span class="cart-order-card__value">
+            ${canEdit ? `
             <button type="button" class="cart-order-card__qty-btn" data-qty-step="-1" data-order-id="${itemKey}" style="width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer;">−</button>
             <span style="display:inline-block; min-width: 32px; text-align:center;">${qty}</span>
             <button type="button" class="cart-order-card__qty-btn" data-qty-step="1" data-order-id="${itemKey}" style="width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer;">+</button>
+            ` : `<span>${qty}</span>`}
           </span>
         </div>
         <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Unit Price:</span>
+          <span class="cart-order-card__label">Price per Cylinder:</span>
           <span class="cart-order-card__value">${formatPKR(unitPrice)}</span>
         </div>
-        ${order.customerName ? `
-        <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Customer:</span>
-          <span class="cart-order-card__value">${order.customerName}</span>
-        </div>
-        ` : ''}
-        ${order.phone ? `
-        <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Phone:</span>
-          <span class="cart-order-card__value">${order.phone}</span>
-        </div>
-        ` : ''}
-        ${order.address ? `
-        <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Address:</span>
-          <span class="cart-order-card__value">${order.address}</span>
-        </div>
-        ` : ''}
-        <div class="cart-order-card__divider"></div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Subtotal:</span>
           <span class="cart-order-card__value ${discount > 0 ? 'is-struck' : ''}">${formatPKR(subtotal)}</span>
         </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Customer Name:</span>
+          <span class="cart-order-card__value">${customerName}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Phone Number:</span>
+          <span class="cart-order-card__value">${phone}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Delivery Address:</span>
+          <span class="cart-order-card__value">${address}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Coupon Used:</span>
+          <span class="cart-order-card__value">${couponCode || 'None'}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Order Status:</span>
+          <span class="cart-order-card__value">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+        </div>
+        <div class="cart-order-card__row">
+          <span class="cart-order-card__label">Created At:</span>
+          <span class="cart-order-card__value">${createdAt ? formatDate(createdAt) : '—'}</span>
+        </div>
         ${discount > 0 ? `
+        <div class="cart-order-card__divider"></div>
         <div class="cart-order-card__row cart-order-card__row--discount">
           <span class="cart-order-card__label">Discount:</span>
           <span class="cart-order-card__value">${formatPKR(discount)} ${couponCode ? `(${couponCode})` : ''}</span>
         </div>
         ` : ''}
-        <div class="cart-order-card__row">
-          <span class="cart-order-card__label">Coupon:</span>
-          <span class="cart-order-card__value">${couponCode || 'No coupon'}</span>
-        </div>
+        <div class="cart-order-card__divider"></div>
         <div class="cart-order-card__row cart-order-card__row--total">
           <span class="cart-order-card__label">Total:</span>
           <span class="cart-order-card__value cart-order-card__value--total">${formatPKR(total)}</span>
@@ -120,10 +142,17 @@
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const key = deleteBtn.getAttribute('data-order-id');
-        if (key && window.CartManager && typeof window.CartManager.removeItem === 'function') {
+        if (!key) return;
+
+        // Check if it's a placed order (starts with 'ORD-') or a cart item
+        if (key.startsWith('ORD-') && window.OrderStorage && typeof window.OrderStorage.deleteOrder === 'function') {
+          // Delete placed order
+          window.OrderStorage.deleteOrder(key);
+        } else if (window.CartManager && typeof window.CartManager.removeItem === 'function') {
+          // Delete cart item
           window.CartManager.removeItem(key);
-          loadOrders();
         }
+        loadOrders();
       });
     }
 
@@ -150,29 +179,37 @@
   };
 
   const loadOrders = () => {
-    // Option A: Client-side cart persistence (localStorage) via CartManager
+    // Get cart items from CartManager (localStorage: lpg_cart)
     const cart = (window.CartManager && typeof window.CartManager.getCart === 'function')
       ? window.CartManager.getCart()
       : { items: [] };
 
-    const orders = Array.isArray(cart.items) ? cart.items : [];
+    const cartItems = Array.isArray(cart.items) ? cart.items : [];
 
-    // Update cart indicator
+    // Get placed orders from OrderStorage (localStorage: lpg_orders)
+    const placedOrders = (window.OrderStorage && typeof window.OrderStorage.getAllOrders === 'function')
+      ? window.OrderStorage.getAllOrders()
+      : [];
+
+    // Combine both: show placed orders first, then cart items
+    const allOrders = [...placedOrders, ...cartItems];
+
+    // Update cart indicator (only for cart items, not placed orders)
     if (typeof window.setCartIndicator === 'function') {
-      window.setCartIndicator(orders.length > 0);
+      window.setCartIndicator(cartItems.length > 0);
     }
 
-    // Show/hide mini cart button
+    // Show/hide mini cart button (only for cart items)
     const miniCartBtn = document.getElementById('order-mini-cart');
     if (miniCartBtn) {
-      if (orders.length > 0) {
+      if (cartItems.length > 0) {
         miniCartBtn.classList.remove('is-hidden');
       } else {
         miniCartBtn.classList.add('is-hidden');
       }
     }
 
-    if (orders.length === 0) {
+    if (allOrders.length === 0) {
       cartPageEmpty.classList.remove('is-hidden');
       cartPageOrders.classList.add('is-hidden');
       cartPageOrders.innerHTML = '';
@@ -181,7 +218,7 @@
       cartPageOrders.classList.remove('is-hidden');
       cartPageOrders.innerHTML = '';
 
-      orders.forEach(order => {
+      allOrders.forEach(order => {
         const card = renderOrderCard(order);
         cartPageOrders.appendChild(card);
       });

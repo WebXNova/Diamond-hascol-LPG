@@ -1,41 +1,32 @@
 (() => {
   'use strict';
 
-  // Fetch product from API
-  const fetchProduct = async (productId) => {
-    try {
-      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
-        ? window.getApiUrl('products') 
-        : 'http://localhost:5000/api/products';
-      
-      const response = await fetch(`${apiUrl}/${productId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // Map category keys to numeric product IDs
+  const mapProductIdToNumeric = (productId) => {
+    if (!productId) return null;
+    const idStr = String(productId).toLowerCase();
+    if (idStr === 'domestic') return 1;
+    if (idStr === 'commercial') return 2;
+    // If already numeric, return as-is
+    const numericId = parseInt(productId, 10);
+    if (!isNaN(numericId)) return numericId;
+    return null;
+  };
 
-      if (!response.ok) {
-        console.error('Failed to fetch product:', response.status, response.statusText);
-        return null;
-      }
-
-      const result = await response.json();
-      
-      if (!result.success || !result.data) {
-        console.error('Invalid product response:', result);
-        return null;
-      }
-
-      // Transform backend product to match frontend format
-      const product = result.data;
-      
-      // Map category to type for backward compatibility
-      const type = product.category?.toLowerCase() || 'domestic';
-      
-      // Default specs based on category
-      const defaultSpecs = {
-        'domestic': [
+  // Static product objects for failsafe (used when API fails or for category keys)
+  const getStaticProduct = (productId) => {
+    const idStr = String(productId).toLowerCase();
+    if (idStr === 'domestic') {
+      return {
+        id: 1,
+        name: 'Domestic LPG Cylinder',
+        type: 'domestic',
+        category: 'Domestic',
+        price: 3200,
+        image: './public/domesticcylinder.png',
+        description: 'Perfect for home use - safe, reliable, and efficient. Our domestic LPG cylinders are designed for everyday household cooking and heating needs.',
+        inStock: true,
+        specs: [
           'Standard 45kg capacity - ideal for household use',
           'ISI certified and safety tested - meets all quality standards',
           'Long-lasting and efficient - optimized fuel consumption',
@@ -43,8 +34,20 @@
           'Compatible with standard regulators - universal compatibility',
           'Durable construction - built to last for years',
           'Safety valve included - ensures safe operation'
-        ],
-        'commercial': [
+        ]
+      };
+    }
+    if (idStr === 'commercial') {
+      return {
+        id: 2,
+        name: 'Commercial LPG Cylinder',
+        type: 'commercial',
+        category: 'Commercial',
+        price: 12800,
+        image: './public/commercilcylinder.png',
+        description: 'Ideal for businesses and commercial establishments. High-capacity cylinders designed for restaurants, hotels, and industrial use.',
+        inStock: true,
+        specs: [
           'High-capacity design for commercial use - meets business demands',
           'ISI certified and safety tested - professional grade quality',
           'Durable construction for heavy usage - built for commercial operations',
@@ -54,21 +57,77 @@
           'Long service life - cost-effective for business operations'
         ]
       };
+    }
+    return null;
+  };
+
+  // Fetch product from API
+  const fetchProduct = async (productId) => {
+    // Handle null/undefined productId
+    if (!productId) {
+      const staticProduct = getStaticProduct('domestic');
+      return staticProduct;
+    }
+
+    // Map category keys to numeric IDs before API call
+    const mappedId = mapProductIdToNumeric(productId);
+    if (!mappedId) {
+      console.warn('Invalid product ID, using static product:', productId);
+      const staticProduct = getStaticProduct(productId);
+      return staticProduct || getStaticProduct('domestic'); // Return static product as failsafe
+    }
+
+    // Determine category key for static product fallback
+    const categoryKey = String(productId).toLowerCase();
+    const staticProduct = getStaticProduct(categoryKey) || getStaticProduct('domestic');
+
+    try {
+      const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
+        ? window.getApiUrl('products') 
+        : 'http://localhost:5000/api/products';
+      
+      const response = await fetch(`${apiUrl}/${mappedId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to fetch product from API, using static product:', response.status, response.statusText);
+        return staticProduct; // Return static product as failsafe instead of null
+      }
+
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        console.warn('Invalid product response, using static product:', result);
+        return staticProduct; // Return static product as failsafe instead of null
+      }
+
+      // Transform backend product to match frontend format
+      const product = result.data;
+      
+      // Map category to type for backward compatibility
+      const type = product.category?.toLowerCase() || categoryKey;
+      
+      // Get static product for specs/description fallback based on category
+      const fallbackStaticProduct = getStaticProduct(type) || staticProduct;
       
       return {
         id: product.id,
-        name: product.name,
+        name: product.name || fallbackStaticProduct.name,
         type: type,
-        category: product.category,
-        price: product.price,
-        image: product.imageUrl || '',
-        description: product.description || '',
+        category: product.category || fallbackStaticProduct.category,
+        price: product.price || fallbackStaticProduct.price,
+        image: product.imageUrl || fallbackStaticProduct.image,
+        description: product.description || fallbackStaticProduct.description,
         inStock: product.inStock !== false, // Explicit check
-        specs: defaultSpecs[type] || defaultSpecs['domestic']
+        specs: fallbackStaticProduct.specs
       };
     } catch (error) {
-      console.error('Error fetching product:', error);
-      return null;
+      console.warn('Error fetching product, using static product:', error);
+      return staticProduct; // Return static product as failsafe instead of null
     }
   };
 
@@ -541,6 +600,11 @@
       orderPageCylinderType.value = product.type;
     }
 
+    // Ensure productId is set (use productId parameter or fall back to product.type)
+    if (orderPageProductId && (!orderPageProductId.value || orderPageProductId.value === '')) {
+      orderPageProductId.value = productId || product.type || 'domestic';
+    }
+
     // Show order page
     if (orderPage) {
       orderPage.classList.remove('is-hidden');
@@ -640,13 +704,17 @@
       e.preventDefault();
 
       const formData = new FormData(orderPageForm);
-      const productId = formData.get('productId');
+      let productId = formData.get('productId');
       const quantity = parseInt(formData.get('quantity') || '1', 10);
       const cylinderType = formData.get('cylinderType') || 'domestic';
 
-      if (!productId) {
-        alert('Product ID is missing. Please try again.');
-        return;
+      // If productId is missing, use cylinderType as fallback (domestic/commercial)
+      if (!productId || productId === '') {
+        productId = cylinderType || 'domestic';
+        // Update the hidden field so it persists
+        if (orderPageProductId) {
+          orderPageProductId.value = productId;
+        }
       }
 
       const product = await fetchProduct(productId);

@@ -307,7 +307,6 @@ function renderHistory() {
   }
 
   tableBody.innerHTML = filtered.map(order => {
-<<<<<<< HEAD
     const orderId = order.id || 'N/A';
     const customerName = order.customerName || 'N/A';
     const phone = order.phone || 'N/A';
@@ -371,24 +370,6 @@ function renderHistory() {
       btn.textContent = isOpen ? 'Less' : 'More';
     });
   });
-=======
-    const status = order.status || 'pending';
-    const cylinderType = order.cylinderType ? order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1) : 'N/A';
-    
-    return `
-      <tr>
-        <td><strong>#${order.id}</strong></td>
-        <td>${order.customerName}</td>
-        <td>${order.phone}</td>
-        <td>${cylinderType}</td>
-        <td>${order.quantity}</td>
-        <td><strong>${formatCurrency(order.total)}</strong></td>
-        <td><span class="admin-badge ${getStatusBadgeClass(status)}">${status}</span></td>
-        <td>${formatDate(order.createdAt)}</td>
-      </tr>
-    `;
-  }).join('');
->>>>>>> 7f425a9 (backend completed)
 }
 
 /**
@@ -400,13 +381,8 @@ export async function initHistory() {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
-<<<<<<< HEAD
         <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
           Loading order history...
-=======
-        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-500);">
-          Loading history...
->>>>>>> 7f425a9 (backend completed)
         </td>
       </tr>
     `;

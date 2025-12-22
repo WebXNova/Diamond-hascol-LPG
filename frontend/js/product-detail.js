@@ -187,15 +187,93 @@
 
   // ============================================
   // API FUNCTIONS
+  // Map category keys to numeric product IDs
+  const mapProductIdToNumeric = (productId) => {
+    if (!productId) return null;
+    const idStr = String(productId).toLowerCase();
+    if (idStr === 'domestic') return 1;
+    if (idStr === 'commercial') return 2;
+    // If already numeric, return as-is
+    const numericId = parseInt(productId, 10);
+    if (!isNaN(numericId)) return numericId;
+    return null;
+  };
+
+  // Static product objects for failsafe (used when API fails or for category keys)
+  const getStaticProduct = (productId) => {
+    const idStr = String(productId).toLowerCase();
+    if (idStr === 'domestic') {
+      return {
+        id: 1,
+        name: 'Domestic LPG Cylinder',
+        type: 'domestic',
+        category: 'Domestic',
+        price: 3200,
+        image: './public/domesticcylinder.png',
+        description: 'Perfect for home use - safe, reliable, and efficient. Our domestic LPG cylinders are designed for everyday household cooking and heating needs. These cylinders are manufactured with the highest safety standards and are ISI certified, ensuring you get a quality product that you can trust for your family\'s daily cooking requirements. With a standard 45kg capacity, these cylinders provide long-lasting fuel supply while being easy to handle and store in your home.',
+        inStock: true,
+        specs: [
+          'Standard 45kg capacity - ideal for household use',
+          'ISI certified and safety tested - meets all quality standards',
+          'Long-lasting and efficient - optimized fuel consumption',
+          'Easy to handle and store - compact design for home storage',
+          'Compatible with standard regulators - universal compatibility',
+          'Durable construction - built to last for years',
+          'Safety valve included - ensures safe operation'
+        ]
+      };
+    }
+    if (idStr === 'commercial') {
+      return {
+        id: 2,
+        name: 'Commercial LPG Cylinder',
+        type: 'commercial',
+        category: 'Commercial',
+        price: 12800,
+        image: './public/commercilcylinder.png',
+        description: 'Ideal for businesses and commercial establishments. High-capacity cylinders designed for restaurants, hotels, and industrial use. These commercial-grade LPG cylinders are built to handle heavy usage and provide reliable fuel supply for your business operations. With superior construction and safety features, these cylinders are perfect for establishments that require consistent and large volumes of LPG for their daily operations.',
+        inStock: true,
+        specs: [
+          'High-capacity design for commercial use - meets business demands',
+          'ISI certified and safety tested - professional grade quality',
+          'Durable construction for heavy usage - built for commercial operations',
+          'Suitable for restaurants and hotels - perfect for food service industry',
+          'Professional grade quality - reliable performance',
+          'Enhanced safety features - meets commercial safety standards',
+          'Long service life - cost-effective for business operations'
+        ]
+      };
+    }
+    return null;
+  };
+
   // ============================================
   const fetchProduct = async (id) => {
+    // Handle null/undefined productId
+    if (!id) {
+      const staticProduct = getStaticProduct('domestic');
+      return staticProduct;
+    }
+
+    // Map category keys to numeric IDs before API call
+    const mappedId = mapProductIdToNumeric(id);
+    if (!mappedId) {
+      console.warn('Invalid product ID, using static product:', id);
+      const staticProduct = getStaticProduct(id);
+      return staticProduct || getStaticProduct('domestic'); // Return static product as failsafe
+    }
+
+    // Determine category key for static product fallback
+    const categoryKey = String(id).toLowerCase();
+    const staticProduct = getStaticProduct(categoryKey) || getStaticProduct('domestic');
+
     try {
       // Use centralized API config if available, otherwise use default
       const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
         ? window.getApiUrl('products') 
         : 'http://localhost:5000/api/products';
       
-      const response = await fetch(`${apiUrl}/${id}`, {
+      const response = await fetch(`${apiUrl}/${mappedId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -203,69 +281,40 @@
       });
 
       if (!response.ok) {
-        console.error('Failed to fetch product:', response.status, response.statusText);
-        return null;
+        console.warn('Failed to fetch product from API, using static product:', response.status, response.statusText);
+        return staticProduct; // Return static product as failsafe instead of null
       }
 
       const result = await response.json();
       
       if (!result.success || !result.data) {
-        console.error('Invalid product response:', result);
-        return null;
+        console.warn('Invalid product response, using static product:', result);
+        return staticProduct; // Return static product as failsafe instead of null
       }
 
       // Transform backend product to match frontend format
       const product = result.data;
       
-      // Default descriptions and specs based on product type
-      const defaultData = {
-        domestic: {
-          description: 'Perfect for home use - safe, reliable, and efficient. Our domestic LPG cylinders are designed for everyday household cooking and heating needs. These cylinders are manufactured with the highest safety standards and are ISI certified, ensuring you get a quality product that you can trust for your family\'s daily cooking requirements. With a standard 45kg capacity, these cylinders provide long-lasting fuel supply while being easy to handle and store in your home.',
-          specs: [
-            'Standard 45kg capacity - ideal for household use',
-            'ISI certified and safety tested - meets all quality standards',
-            'Long-lasting and efficient - optimized fuel consumption',
-            'Easy to handle and store - compact design for home storage',
-            'Compatible with standard regulators - universal compatibility',
-            'Durable construction - built to last for years',
-            'Safety valve included - ensures safe operation'
-          ]
-        },
-        commercial: {
-          description: 'Ideal for businesses and commercial establishments. High-capacity cylinders designed for restaurants, hotels, and industrial use. These commercial-grade LPG cylinders are built to handle heavy usage and provide reliable fuel supply for your business operations. With superior construction and safety features, these cylinders are perfect for establishments that require consistent and large volumes of LPG for their daily operations.',
-          specs: [
-            'High-capacity design for commercial use - meets business demands',
-            'ISI certified and safety tested - professional grade quality',
-            'Durable construction for heavy usage - built for commercial operations',
-            'Suitable for restaurants and hotels - perfect for food service industry',
-            'Professional grade quality - reliable performance',
-            'Enhanced safety features - meets commercial safety standards',
-            'Long service life - cost-effective for business operations'
-          ]
-        }
-      };
+      // Map category to type for backward compatibility
+      const type = product.category?.toLowerCase() || categoryKey;
       
-      const typeKey = product.type?.toLowerCase() || id.toLowerCase();
-      const defaults = defaultData[typeKey] || { description: '', specs: [] };
-      
-      // Use real product data from API
-      const typeKey = product.category?.toLowerCase() || id.toLowerCase();
-      const defaults = defaultData[typeKey] || { description: '', specs: [] };
+      // Get static product for specs/description fallback based on category
+      const fallbackStaticProduct = getStaticProduct(type) || staticProduct;
       
       return {
-        id: product.id || id,
-        name: product.name || 'Product',
-        type: product.category?.toLowerCase() || id,
-        category: product.category,
-        description: product.description || defaults.description,
-        image: product.imageUrl || (product.category === 'Domestic' ? './public/domesticcylinder.png' : './public/commercilcylinder.png'),
-        price: product.price || 0,
+        id: product.id || mappedId,
+        name: product.name || fallbackStaticProduct.name,
+        type: type,
+        category: product.category || fallbackStaticProduct.category,
+        description: product.description || fallbackStaticProduct.description,
+        image: product.imageUrl || fallbackStaticProduct.image,
+        price: product.price || fallbackStaticProduct.price,
         inStock: product.inStock !== false, // Explicit check
-        specs: defaults.specs
+        specs: fallbackStaticProduct.specs
       };
     } catch (error) {
-      console.error('Error fetching product:', error);
-      return null;
+      console.warn('Error fetching product, using static product:', error);
+      return staticProduct; // Return static product as failsafe instead of null
     }
   };
 
