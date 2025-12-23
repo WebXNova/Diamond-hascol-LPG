@@ -9,7 +9,7 @@ CREATE TABLE orders (
   phone BIGINT NOT NULL,
   address TEXT NOT NULL,
 
-  cylinder_type ENUM('Domestic', 'Commercial') NOT NULL,
+  cylindertype ENUM('Domestic', 'Commercial') NOT NULL,
   quantity INT NOT NULL CHECK (quantity > 0),
 
   price_per_cylinder DECIMAL(10,2) NOT NULL,

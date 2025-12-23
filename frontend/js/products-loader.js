@@ -169,12 +169,14 @@
     }).join('');
 
     // Preserve refilling card from original HTML
-    const refillingCard = document.querySelector('.product-card[data-product-type="refilling"]');
-    if (refillingCard) {
-      const refillingHTML = refillingCard.outerHTML;
-      productsGrid.innerHTML = productsHTML + refillingHTML;
-    } else {
-      productsGrid.innerHTML = productsHTML;
+    {
+      const refillingCard = document.querySelector('.product-card[data-product-type="refilling"]');
+      if (refillingCard) {
+        const refillingHTML = refillingCard.outerHTML;
+        productsGrid.innerHTML = productsHTML + refillingHTML;
+      } else {
+        productsGrid.innerHTML = productsHTML;
+      }
     }
   }
 

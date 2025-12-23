@@ -17,10 +17,12 @@ const Order = sequelize.define(
     phone: {
       type: DataTypes.BIGINT,
       allowNull: false,
+      field: "phone",
     },
     address: {
       type: DataTypes.TEXT,
       allowNull: false,
+      field: "address",
     },
     cylinderType: {
       type: DataTypes.ENUM("Domestic", "Commercial"),
@@ -30,9 +32,8 @@ const Order = sequelize.define(
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      validate: {
-        min: 1,
-      },
+      validate: { min: 1 },
+      field: "quantity",
     },
     pricePerCylinder: {
       type: DataTypes.DECIMAL(10, 2),
@@ -42,11 +43,13 @@ const Order = sequelize.define(
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+      field: "subtotal",
     },
     discount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
+      field: "discount",
     },
     totalPrice: {
       type: DataTypes.DECIMAL(10, 2),
@@ -59,18 +62,25 @@ const Order = sequelize.define(
       field: "coupon_code",
     },
     status: {
-      type: DataTypes.ENUM("pending", "confirmed", "in-transit", "delivered", "cancelled"),
+      type: DataTypes.ENUM(
+        "pending",
+        "confirmed",
+        "in-transit",
+        "delivered",
+        "cancelled"
+      ),
       allowNull: false,
       defaultValue: "pending",
+      field: "status",
     },
   },
   {
-    timestamps: true,
+    tableName: "orders",
     underscored: true,
+    freezeTableName: true,
+    timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
-    tableName: "orders",
-    freezeTableName: true,
   }
 );
 

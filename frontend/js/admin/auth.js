@@ -94,12 +94,21 @@ export async function login(email, password) {
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      const text = await response.text().catch(() => '');
+      return {
+        success: false,
+        error: text || `Login failed (HTTP ${response.status})`
+      };
+    }
 
     if (!response.ok || !data.success) {
       return {
         success: false,
-        error: data.error || 'Login failed. Please try again.'
+        error: data.error || `Login failed (HTTP ${response.status})`
       };
     }
 

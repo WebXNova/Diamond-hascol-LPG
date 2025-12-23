@@ -45,16 +45,32 @@ const publicCorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
-// Admin CORS - restrict to frontend origin in production
+// Admin CORS - allow only trusted frontend origins (avoid wildcard + credentials issues)
+const allowedAdminOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    process.env.ADMIN_CORS_ORIGIN,
+    'http://localhost:5173', // Vite dev server
+  ].filter(Boolean)
+);
+
 const adminCorsOptions = {
-  origin: process.env.FRONTEND_URL || process.env.ADMIN_CORS_ORIGIN || '*', // Restrict in production
+  origin: (origin, cb) => {
+    // Allow requests with no Origin header (same-origin, server-to-server, Postman)
+    if (!origin) return cb(null, true);
+    if (allowedAdminOrigins.has(origin)) return cb(null, true);
+    return cb(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // Allow credentials (cookies, auth headers)
+  credentials: false // JWT is sent via Authorization header, not cookies
 };
 
 // Apply public CORS to all routes
 app.use(cors(publicCorsOptions));
+
+// Ensure admin preflight requests succeed
+app.options(/^\/api\/admin\/.*$/, cors(adminCorsOptions));
 
 // Compression middleware (reduce response size) - optional
 if (compression) {

@@ -61,6 +61,12 @@
     return null;
   };
 
+  // Validate productId against allowed set (numeric 1 or 2, or their labels)
+  const isValidProductId = (productId) => {
+    const mapped = mapProductIdToNumeric(productId);
+    return mapped === 1 || mapped === 2;
+  };
+
   // Fetch product from API
   const fetchProduct = async (productId) => {
     // Handle null/undefined productId
@@ -148,6 +154,7 @@
   let lastFocusedElement = null;
 
   const openDescriptionModal = async (productId) => {
+    if (!isValidProductId(productId)) return;
     const product = await fetchProduct(productId);
     if (!product) {
       console.error('Product not found:', productId);
@@ -277,7 +284,9 @@
     document.body.classList.add('product-desc-modal-open');
 
     // Focus first focusable element
-    modalClose.focus();
+    if (modalClose) {
+      modalClose.focus();
+    }
 
     // Fire analytics
     if (window.analytics && typeof window.analytics.track === 'function') {
@@ -294,8 +303,9 @@
     if (lastFocusedElement instanceof HTMLElement) {
       const style = window.getComputedStyle(lastFocusedElement);
       if (style.display !== 'none' && style.visibility !== 'hidden') {
+        const target = lastFocusedElement;
         window.requestAnimationFrame(() => {
-          lastFocusedElement.focus();
+          if (target) target.focus();
         });
       }
     }
@@ -325,7 +335,7 @@
     modalBuyNow.addEventListener('click', async () => {
       if (currentProductId && !modalBuyNow.disabled) {
         // Check stock before navigating
-        const product = await fetchProduct(currentProductId);
+    const product = await fetchProduct(currentProductId);
         if (product && product.inStock === false) {
           alert('This product is currently out of stock and cannot be purchased.');
           return;
@@ -840,7 +850,7 @@
     if (hash.startsWith('#order')) {
       const url = new URL(hash.substring(1), window.location.origin);
       const productId = url.searchParams.get('product');
-      if (productId) {
+      if (isValidProductId(productId)) {
         navigateToOrderPage(productId);
       }
     } else if (orderPage && !orderPage.classList.contains('is-hidden')) {
@@ -868,7 +878,7 @@
       e.preventDefault();
       e.stopPropagation();
       const productId = btn.getAttribute('data-product-id');
-      if (productId) {
+      if (isValidProductId(productId)) {
         openDescriptionModal(productId);
       }
     });
@@ -881,7 +891,7 @@
       e.preventDefault();
       e.stopPropagation();
       const productId = buyBtn.getAttribute('data-product-id');
-      if (productId) {
+      if (isValidProductId(productId)) {
         // Check stock before navigating
         const product = await fetchProduct(productId);
         if (product && product.inStock === false) {
