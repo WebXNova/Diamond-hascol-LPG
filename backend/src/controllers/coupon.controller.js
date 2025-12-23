@@ -96,15 +96,16 @@ const validateCouponCode = async (req, res, next) => {
       });
     }
 
-    // Check if coupon already used (one-time usage rule - consistent with order creation)
-    const existingUsage = await CouponUsage.findOne({
+    // Enforce usage limit
+    const usedCount = await CouponUsage.count({
       where: { couponCode: normalizedCode },
     });
 
-    if (existingUsage) {
+    const limit = coupon.usageLimit ? parseInt(coupon.usageLimit, 10) : 100;
+    if (usedCount >= limit) {
       return res.status(400).json({
         success: false,
-        error: 'Coupon has already been used'
+        error: 'Coupon usage limit reached',
       });
     }
 

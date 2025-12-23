@@ -153,15 +153,16 @@ const createSimpleOrder = async (req, res) => {
             console.log('   Coupon not applicable for this cylinder type');
           }
 
-          // Check if coupon already used (one-time rule)
+          // Enforce usage limit
           if (isValid) {
             const CouponUsage = require("../models/couponUsage.model");
-            const existingUsage = await CouponUsage.findOne({
+            const usedCount = await CouponUsage.count({
               where: { couponCode: normalizedCouponCode },
             });
-            if (existingUsage) {
+            const limit = coupon.usageLimit ? parseInt(coupon.usageLimit, 10) : 100;
+            if (usedCount >= limit) {
               isValid = false;
-              console.log('   Coupon already used');
+              console.log('   Coupon usage limit reached');
             }
           }
 

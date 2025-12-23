@@ -123,20 +123,27 @@ async function fetchCoupons() {
 
     if (data.success && Array.isArray(data.data)) {
       // Transform backend data to match frontend format
-      currentCoupons = data.data.map(coupon => ({
-        id: coupon.code, // Use code as ID for consistency
-        code: coupon.code,
-        type: coupon.discountType === 'percentage' ? 'percentage' : 'fixed',
-        value: parseFloat(coupon.discountValue),
-        minPurchase: parseFloat(coupon.minOrderAmount || 0),
-        maxDiscount: coupon.discountType === 'percentage' ? parseFloat(coupon.discountValue) * 100 : parseFloat(coupon.discountValue), // Approximate
-        usageLimit: 999, // Backend doesn't track this, use high default
-        usageCount: 0, // Backend doesn't track this yet
-        expiresAt: coupon.expiryDate ? new Date(coupon.expiryDate).toISOString() : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // Default 1 year if no expiry
-        isActive: coupon.isActive,
-        createdAt: coupon.createdAt || new Date().toISOString(),
-        applicableCylinderType: coupon.applicableCylinderType || 'Both'
-      }));
+      currentCoupons = data.data.map(coupon => {
+        // Accept numeric strings + snake_case keys from backend, then fallback
+        const usageLimitNum = Number(coupon.usageLimit ?? coupon.usage_limit);
+        const usageCountNum = Number(coupon.usageCount ?? coupon.usage_count);
+
+        return ({
+          id: coupon.code, // Use code as ID for consistency
+          code: coupon.code,
+          // Backend enum: 'percentage' | 'flat'
+          type: coupon.discountType,
+          value: parseFloat(coupon.discountValue),
+          minPurchase: parseFloat(coupon.minOrderAmount || 0),
+          maxDiscount: coupon.discountType === 'percentage' ? parseFloat(coupon.discountValue) * 100 : parseFloat(coupon.discountValue), // Approximate
+          usageLimit: Number.isFinite(usageLimitNum) ? usageLimitNum : 100,
+          usageCount: Number.isFinite(usageCountNum) ? usageCountNum : 0,
+          expiresAt: coupon.expiryDate ? new Date(coupon.expiryDate).toISOString() : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // Default 1 year if no expiry
+          isActive: coupon.isActive,
+          createdAt: coupon.createdAt || new Date().toISOString(),
+          applicableCylinderType: coupon.applicableCylinderType || 'Both'
+        });
+      });
       return currentCoupons;
     } else {
       throw new Error('Invalid response format from server');
@@ -368,7 +375,7 @@ window.editCoupon = function(couponId) {
   if (valueInput) valueInput.value = coupon.value;
   if (minPurchaseInput) minPurchaseInput.value = coupon.minPurchase || '0';
   if (maxDiscountInput) maxDiscountInput.value = coupon.maxDiscount || '';
-  if (usageLimitInput) usageLimitInput.value = coupon.usageLimit || '100';
+  if (usageLimitInput) usageLimitInput.value = String(coupon.usageLimit ?? 100);
   if (expiresInput) {
     const expiryDate = coupon.expiresAt ? new Date(coupon.expiresAt).toISOString().split('T')[0] : '';
     expiresInput.value = expiryDate;
@@ -476,7 +483,8 @@ window.saveCoupon = async function(e) {
     minOrderAmount: parseFloat(minPurchaseInput?.value || 0) || undefined,
     applicableCylinderType: cylinderTypeSelect ? cylinderTypeSelect.value : 'Both', // 'Domestic', 'Commercial', or 'Both'
     expiryDate: expiresInput.value || undefined, // YYYY-MM-DD format
-    isActive: isActiveCheckbox ? isActiveCheckbox.checked : true
+    isActive: isActiveCheckbox ? isActiveCheckbox.checked : true,
+    usageLimit: usageLimitInput ? parseInt(usageLimitInput.value, 10) : undefined,
   };
 
   // Validation
@@ -502,6 +510,14 @@ window.saveCoupon = async function(e) {
     showNotification('Expiration date must be in the future', 'error');
     expiresInput.focus();
     return;
+  }
+
+  if (couponData.usageLimit !== undefined) {
+    if (!Number.isInteger(couponData.usageLimit) || couponData.usageLimit < 1) {
+      showNotification('Usage limit must be an integer greater than 0', 'error');
+      usageLimitInput?.focus();
+      return;
+    }
   }
 
   try {

@@ -59,6 +59,47 @@ const PORT = process.env.PORT || 5000;
 let server = null; // Store server instance for graceful shutdown
 
 /**
+ * Ensure required schema pieces exist for coupons usage tracking.
+ * This is idempotent and safe for local + production (no destructive changes).
+ */
+async function ensureCouponSchema() {
+  const qi = sequelize.getQueryInterface();
+
+  // Ensure coupons.usage_limit exists
+  try {
+    const couponsTable = await qi.describeTable("coupons");
+    if (!couponsTable.usage_limit) {
+      console.log("🛠️  Adding missing column coupons.usage_limit ...");
+      await qi.addColumn("coupons", "usage_limit", {
+        type: require("sequelize").DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 100,
+      });
+      console.log("✅ Added coupons.usage_limit");
+    }
+  } catch (e) {
+    console.warn("⚠️  Could not verify/add coupons.usage_limit:", e.message);
+  }
+
+  // Ensure coupon_usage.coupon_code is NOT unique (multi-use coupons)
+  try {
+    const indexes = await qi.showIndex("coupon_usage");
+    const uniqueCouponCodeIndex = indexes.find((idx) => {
+      const fields = (idx.fields || []).map((f) => f.attribute || f.name);
+      return idx.unique === true && fields.length === 1 && fields[0] === "coupon_code";
+    });
+
+    if (uniqueCouponCodeIndex) {
+      console.log(`🛠️  Dropping unique index on coupon_usage.coupon_code (${uniqueCouponCodeIndex.name}) ...`);
+      await qi.removeIndex("coupon_usage", uniqueCouponCodeIndex.name);
+      console.log("✅ Dropped unique index on coupon_usage.coupon_code");
+    }
+  } catch (e) {
+    console.warn("⚠️  Could not verify/drop unique index on coupon_usage.coupon_code:", e.message);
+  }
+}
+
+/**
  * Initialize products in database if they don't exist
  */
 async function initializeProducts() {
@@ -110,6 +151,9 @@ const startServer = async () => {
     // Only create tables if they don't exist (safe for production)
     await sequelize.sync({ alter: false });
     console.log("✅ Database schema synced with models (tables created if they don't exist)");
+
+    // Ensure coupon usage tracking schema is present (idempotent)
+    await ensureCouponSchema();
     
     // Initialize products if they don't exist
     await initializeProducts();

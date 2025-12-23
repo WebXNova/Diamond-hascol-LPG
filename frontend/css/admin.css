@@ -261,14 +261,15 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.5rem 1rem;
+  padding: 0;
   border-radius: 12px;
-  background: rgba(11, 74, 166, 0.04);
+  background: transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .admin-user:hover {
-  background: rgba(11, 74, 166, 0.08);
+  background: transparent;
 }
 
 .admin-user__info {
@@ -298,6 +299,40 @@
   font-weight: 600;
   font-size: var(--fs-2);
   box-shadow: 0 2px 8px rgba(11, 74, 166, 0.2);
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-user__avatar:focus-visible {
+  outline: 3px solid rgba(11, 74, 166, 0.35);
+  outline-offset: 3px;
+}
+
+.admin-user__dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  padding: 0.75rem 0.875rem;
+  border-radius: 14px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.12);
+  z-index: 250;
+}
+
+.admin-user.is-open .admin-user__dropdown {
+  display: block;
+}
+
+.admin-user__dropdown .admin-user__name {
+  margin-bottom: 0.1rem;
+}
+
+.admin-user__dropdown .admin-user__email {
+  word-break: break-word;
 }
 
 /* Content */

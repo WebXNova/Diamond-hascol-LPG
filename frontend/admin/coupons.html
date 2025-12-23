@@ -104,11 +104,11 @@
                         Create Coupon
                     </button>
                     <div class="admin-user">
-                        <div class="admin-user__info">
+                        <button type="button" class="admin-user__avatar" id="admin-user-avatar" aria-label="Open user menu" aria-expanded="false">A</button>
+                        <div class="admin-user__dropdown" aria-hidden="true">
                             <div class="admin-user__name" id="admin-user-name">Admin</div>
                             <div class="admin-user__email" id="admin-user-email">admin@diamondhascol.com</div>
                         </div>
-                        <div class="admin-user__avatar" id="admin-user-avatar">A</div>
                     </div>
                 </div>
             </header>
@@ -171,7 +171,7 @@
                             <label for="coupon-type" class="admin-form-label">Discount Type *</label>
                             <select id="coupon-type" class="admin-form-input" required>
                                 <option value="percentage">Percentage</option>
-                                <option value="fixed">Fixed Amount</option>
+                                <option value="flat">Fixed Amount</option>
                             </select>
                         </div>
                         <div class="admin-form-group">

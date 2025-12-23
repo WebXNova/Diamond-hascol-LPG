@@ -111,6 +111,8 @@ function initHeader() {
     return;
   }
 
+  const userBlock = document.querySelector('.admin-user');
+
   // Set user name
   const userNameEl = document.getElementById('admin-user-name');
   if (userNameEl) {
@@ -128,6 +130,36 @@ function initHeader() {
   if (avatarEl) {
     const initial = (admin.name || admin.email).charAt(0).toUpperCase();
     avatarEl.textContent = initial;
+  }
+
+  // Toggle user dropdown (name/email) on avatar click
+  if (userBlock && avatarEl) {
+    const dropdown = userBlock.querySelector('.admin-user__dropdown');
+
+    const setOpen = (open) => {
+      userBlock.classList.toggle('is-open', open);
+      avatarEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (dropdown) dropdown.setAttribute('aria-hidden', open ? 'false' : 'true');
+    };
+
+    // Ensure default state is closed
+    setOpen(false);
+
+    avatarEl.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(!userBlock.classList.contains('is-open'));
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!userBlock.contains(e.target)) setOpen(false);
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    });
   }
 
   // Logout button

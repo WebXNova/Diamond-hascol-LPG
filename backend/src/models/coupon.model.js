@@ -23,6 +23,13 @@ const Coupon = sequelize.define(
       },
       field: "discount_value",
     },
+    usageLimit: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 100,
+      validate: { min: 1 },
+      field: "usage_limit",
+    },
     applicableCylinderType: {
       type: DataTypes.ENUM("Domestic", "Commercial", "Both"),
       allowNull: false,

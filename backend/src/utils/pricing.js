@@ -76,15 +76,16 @@ async function validateCouponForOrder(couponCode, cylinderType, subtotal) {
     };
   }
 
-  // Check if coupon already used (one-time rule)
-  const existingUsage = await CouponUsage.findOne({
+  // Enforce usage limit
+  const usedCount = await CouponUsage.count({
     where: { couponCode: code },
   });
 
-  if (existingUsage) {
+  const limit = coupon.usageLimit ? parseInt(coupon.usageLimit, 10) : 100;
+  if (usedCount >= limit) {
     return {
       valid: false,
-      error: "Coupon has already been used",
+      error: "Coupon usage limit reached",
     };
   }
 

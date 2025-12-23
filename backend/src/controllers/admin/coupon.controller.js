@@ -1,4 +1,5 @@
 const Coupon = require("../../models/coupon.model");
+const CouponUsage = require("../../models/couponUsage.model");
 
 /**
  * Create a new coupon
@@ -15,6 +16,14 @@ const createCoupon = async (req, res, next) => {
       expiryDate,
       isActive = true,
     } = req.body;
+    // Accept both camelCase and snake_case, and tolerate numeric strings
+    const rawUsageLimit = req.body.usageLimit ?? req.body.usage_limit;
+    const usageLimit =
+      rawUsageLimit === undefined || rawUsageLimit === null
+        ? undefined
+        : typeof rawUsageLimit === "string"
+          ? parseInt(rawUsageLimit, 10)
+          : rawUsageLimit;
 
     // Validation
     if (!code || typeof code !== 'string' || code.trim().length === 0) {
@@ -35,6 +44,15 @@ const createCoupon = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: 'Discount value must be a positive number',
+      });
+    }
+
+    // Validate usage limit (defaults to 100 if not provided)
+    const finalUsageLimit = usageLimit === undefined || usageLimit === null ? 100 : usageLimit;
+    if (!Number.isInteger(finalUsageLimit) || finalUsageLimit < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Usage limit must be an integer >= 1',
       });
     }
 
@@ -72,6 +90,7 @@ const createCoupon = async (req, res, next) => {
       applicableCylinderType,
       minOrderAmount: minOrderAmount || null,
       expiryDate: expiryDate || null,
+      usageLimit: finalUsageLimit,
       isActive: isActive !== undefined ? isActive : true,
     });
 
@@ -86,6 +105,8 @@ const createCoupon = async (req, res, next) => {
         minOrderAmount: coupon.minOrderAmount ? parseFloat(coupon.minOrderAmount) : null,
         expiryDate: coupon.expiryDate,
         isActive: coupon.isActive,
+        usageLimit: coupon.usageLimit,
+        usageCount: 0,
         createdAt: coupon.createdAt,
         updatedAt: coupon.updatedAt,
       },
@@ -120,9 +141,10 @@ const getCoupons = async (req, res, next) => {
     });
 
     // Format coupons for frontend
-    const formattedCoupons = coupons.map(coupon => {
+    const formattedCoupons = await Promise.all(coupons.map(async coupon => {
       const createdAt = coupon.createdAt || coupon.get('createdAt') || coupon.get('created_at') || new Date();
       const updatedAt = coupon.updatedAt || coupon.get('updatedAt') || coupon.get('updated_at') || new Date();
+      const usageCount = await CouponUsage.count({ where: { couponCode: coupon.code } });
 
       return {
         code: coupon.code,
@@ -132,10 +154,12 @@ const getCoupons = async (req, res, next) => {
         minOrderAmount: coupon.minOrderAmount ? parseFloat(coupon.minOrderAmount) : null,
         expiryDate: coupon.expiryDate,
         isActive: coupon.isActive,
+        usageLimit: coupon.usageLimit,
+        usageCount,
         createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
         updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
       };
-    });
+    }));
 
     return res.status(200).json({
       success: true,
@@ -165,6 +189,7 @@ const getCouponByCode = async (req, res, next) => {
 
     const normalizedCode = code.trim().toUpperCase();
     const coupon = await Coupon.findByPk(normalizedCode);
+    const usageCount = await CouponUsage.count({ where: { couponCode: coupon.code } });
 
     if (!coupon) {
       return res.status(404).json({
@@ -186,6 +211,8 @@ const getCouponByCode = async (req, res, next) => {
         minOrderAmount: coupon.minOrderAmount ? parseFloat(coupon.minOrderAmount) : null,
         expiryDate: coupon.expiryDate,
         isActive: coupon.isActive,
+        usageLimit: coupon.usageLimit,
+        usageCount,
         createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
         updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
       },
@@ -211,6 +238,14 @@ const updateCoupon = async (req, res, next) => {
       expiryDate,
       isActive,
     } = req.body;
+    // Accept both camelCase and snake_case, and tolerate numeric strings
+    const rawUsageLimit = req.body.usageLimit ?? req.body.usage_limit;
+    const usageLimit =
+      rawUsageLimit === undefined || rawUsageLimit === null
+        ? undefined
+        : typeof rawUsageLimit === "string"
+          ? parseInt(rawUsageLimit, 10)
+          : rawUsageLimit;
 
     if (!code) {
       return res.status(400).json({
@@ -235,6 +270,16 @@ const updateCoupon = async (req, res, next) => {
         success: false,
         error: 'Discount type must be "percentage" or "flat"',
       });
+    }
+
+    // Validate usage limit if provided
+    if (usageLimit !== undefined) {
+      if (!Number.isInteger(usageLimit) || usageLimit < 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Usage limit must be an integer >= 1',
+        });
+      }
     }
 
     // Validate discount value if provided
@@ -269,6 +314,7 @@ const updateCoupon = async (req, res, next) => {
     if (applicableCylinderType !== undefined) coupon.applicableCylinderType = applicableCylinderType;
     if (minOrderAmount !== undefined) coupon.minOrderAmount = minOrderAmount || null;
     if (expiryDate !== undefined) coupon.expiryDate = expiryDate || null;
+    if (usageLimit !== undefined) coupon.usageLimit = usageLimit;
     if (isActive !== undefined) coupon.isActive = isActive;
 
     await coupon.save();
@@ -287,6 +333,7 @@ const updateCoupon = async (req, res, next) => {
         minOrderAmount: coupon.minOrderAmount ? parseFloat(coupon.minOrderAmount) : null,
         expiryDate: coupon.expiryDate,
         isActive: coupon.isActive,
+        usageLimit: coupon.usageLimit,
         createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
         updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
       },
@@ -321,6 +368,10 @@ const deleteCoupon = async (req, res, next) => {
         error: 'Coupon not found',
       });
     }
+
+    // If the database has a restrictive FK from coupon_usage -> coupons,
+    // deleting the coupon will fail unless usage rows are removed first.
+    await CouponUsage.destroy({ where: { couponCode: normalizedCode } });
 
     await coupon.destroy();
 

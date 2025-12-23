@@ -4,6 +4,8 @@ CREATE TABLE coupons (
   
   discount_type ENUM('percentage', 'flat') NOT NULL,
   discount_value DECIMAL(10,2) NOT NULL CHECK (discount_value >= 0),
+
+  usage_limit INT NOT NULL DEFAULT 100,
   
   applicable_cylinder_type ENUM('Domestic', 'Commercial', 'Both') NOT NULL,
   min_order_amount DECIMAL(10,2) NULL,
