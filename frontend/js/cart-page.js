@@ -8,6 +8,9 @@
 
   if (!cartPage || !cartPageOrders || !cartPageEmpty) return;
 
+  /** @type {number|null} */
+  let refreshIntervalId = null;
+
   const formatPKR = (n) => {
     const moneyFmt = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
     return `₨${moneyFmt.format(Math.max(0, Math.round(n)))}`;
@@ -28,115 +31,196 @@
     }
   };
 
+  const esc = (value) => {
+    // Decode numeric HTML entities first (e.g. "&#x2F;" -> "/") then escape for XSS safety.
+    // This fixes cases where backend/data already contains encoded entities.
+    const decoded = String(value)
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+        const cp = parseInt(hex, 16);
+        return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+      })
+      .replace(/&#(\d+);/g, (_, dec) => {
+        const cp = parseInt(dec, 10);
+        return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+      });
+
+    if (typeof window !== 'undefined' && window.SafeRender && typeof window.SafeRender.escapeHtml === 'function') {
+      return window.SafeRender.escapeHtml(decoded);
+    }
+
+    return decoded
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const safeText = (value, fallback = '—') => {
+    if (value === null || value === undefined) return fallback;
+    const s = String(value).trim();
+    return s ? s : fallback;
+  };
+
+  const toNumberOrNull = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const getOrderProductName = (order) => {
+    const ct = safeText(order && order.cylinderType, '').toLowerCase();
+    if (ct === 'commercial') return 'Commercial LPG Cylinder';
+    if (ct === 'domestic') return 'Domestic LPG Cylinder';
+    return safeText(order && (order.productName || order.name), '—');
+  };
+
+  const getStatusKey = (raw) => {
+    const s = safeText(raw, '').toLowerCase();
+    if (s === 'pending' || s === 'confirmed' || s === 'delivered' || s === 'cancelled') return s;
+    return 'unknown';
+  };
+
+  const getStatusLabel = (key) => {
+    const labels = {
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
+      unknown: 'Unknown',
+    };
+    return labels[key] || 'Unknown';
+  };
+
+  const renderStatusBadge = (statusRaw) => {
+    const key = getStatusKey(statusRaw);
+    const label = getStatusLabel(key);
+    return `<span class="cart-status-badge cart-status-badge--${key}">${esc(label)}</span>`;
+  };
+
   const renderOrderCard = (order) => {
     const card = document.createElement('div');
     card.className = 'cart-order-card';
-    const itemKey = order.itemId || order.id;
+    const itemKey = order.itemId || order.id || order.orderId;
     card.setAttribute('data-order-id', itemKey);
+    card.setAttribute('data-is-placed-order', order._isPlacedOrder === true ? 'true' : 'false');
 
     // Extract all order data from various possible locations
-    const orderId = order.id || order.itemId || '—';
-    const productName = order.productName || order.name || '—';
-    const typeValue = order.type || order.cylinderType || 'domestic';
+    const orderId = safeText(order.orderId || order.id || order.itemId);
+    const productName = getOrderProductName(order);
+    const typeValue = safeText(order.type || order.cylinderType || 'domestic', 'domestic');
     const cylinderTypeDisplay = String(typeValue).toLowerCase() === 'commercial' ? 'Commercial' : 'Domestic';
-    const qty = order.quantity || 1;
-    const unitPrice = order.unitPrice || order.unit || 0;
-    const subtotal = (unitPrice) * qty;
-    const discount = (order.meta && typeof order.meta.discount === 'number') ? order.meta.discount : (order.discount || 0);
-    const totalFromMeta = (order.meta && typeof order.meta.finalTotal === 'number') ? order.meta.finalTotal : null;
-    const total = (typeof totalFromMeta === 'number') ? totalFromMeta : (order.total || order.totalPrice || order.finalPrice || (subtotal - discount));
+
+    // Determine if this is a cart item (can be edited) or a placed order (read-only)
+    // Placed orders must render from backend fields only.
+    const isPlacedOrder =
+      order._isPlacedOrder === true ||
+      (order.id && typeof order.id === 'string' && (order.id.startsWith('ORD-') || order.timestamp));
+
+    const qty = isPlacedOrder ? safeText(order.quantity, '—') : (Number.isFinite(Number(order.quantity)) ? Number(order.quantity) : 1);
+
+    const unitPrice = isPlacedOrder
+      ? toNumberOrNull(order.pricePerCylinder)
+      : toNumberOrNull(order.unitPrice || order.unit || 0);
+
+    const subtotal = isPlacedOrder ? toNumberOrNull(order.subtotal) : (unitPrice === null ? null : (unitPrice * (Number(qty) || 0)));
+
+    const discount = isPlacedOrder
+      ? toNumberOrNull(order.discount)
+      : (order.meta && typeof order.meta.discount === 'number') ? order.meta.discount : toNumberOrNull(order.discount || 0);
+
+    const totalFromMeta = (!isPlacedOrder && order.meta && typeof order.meta.finalTotal === 'number') ? order.meta.finalTotal : null;
+    const total = isPlacedOrder
+      ? toNumberOrNull(order.totalPrice || order.total)
+      : (typeof totalFromMeta === 'number' ? totalFromMeta : toNumberOrNull(order.total || order.totalPrice || order.finalPrice || (subtotal === null ? 0 : (subtotal - (discount || 0)))));
+
     const couponCode =
       (order.meta && order.meta.couponCode) ? order.meta.couponCode :
       (order.couponCode || order.coupon || null);
-    const customerName = order.customerName || order.name || (order.meta && order.meta.customerName) || '—';
-    const phone = order.phone || (order.meta && order.meta.phone) || '—';
-    const address = order.address || (order.meta && order.meta.address) || '—';
-    const status = order.status || (order.meta && order.meta.status) || 'pending';
+
+    const customerName = safeText(order.customerName || (order.meta && order.meta.customerName) || '—');
+    const phone = safeText(order.phone || (order.meta && order.meta.phone) || '—');
+    const address = safeText(order.address || (order.meta && order.meta.address) || '—');
+    const statusRaw = safeText(order.status || (order.meta && order.meta.status) || 'pending', 'pending');
+    const statusBadge = renderStatusBadge(statusRaw);
     const createdAt = order.createdAt || (order.meta && order.meta.createdAt) || null;
 
-    // Determine if this is a cart item (can be edited) or a placed order (read-only)
-    const isPlacedOrder = !!order.id && order.id.startsWith('ORD-');
     const canEdit = !isPlacedOrder;
 
     card.innerHTML = `
       <div class="cart-order-card__header">
         <div class="cart-order-card__title-row">
           <h3 class="cart-order-card__title">${isPlacedOrder ? 'Order' : 'Cart Item'}</h3>
-          <span class="cart-order-card__date">${createdAt ? formatDate(createdAt) : '—'}</span>
+          <span class="cart-order-card__date">${createdAt ? esc(formatDate(createdAt)) : '—'}</span>
         </div>
-        ${canEdit ? `<button type="button" class="cart-order-card__delete" data-order-id="${itemKey}" aria-label="Remove from cart">×</button>` : ''}
+        ${canEdit ? `<button type="button" class="cart-order-card__delete" data-order-id="${esc(itemKey)}" aria-label="Remove from cart">×</button>` : ''}
       </div>
       <div class="cart-order-card__body">
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Order ID:</span>
-          <span class="cart-order-card__value">${orderId}</span>
+          <span class="cart-order-card__value">${esc(orderId)}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Product / Cylinder Name:</span>
-          <span class="cart-order-card__value">${productName}</span>
+          <span class="cart-order-card__value">${esc(safeText(productName))}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Cylinder Type:</span>
-          <span class="cart-order-card__value">${cylinderTypeDisplay}</span>
+          <span class="cart-order-card__value">${esc(cylinderTypeDisplay)}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Quantity:</span>
           <span class="cart-order-card__value">
-            ${canEdit ? `
-            <button type="button" class="cart-order-card__qty-btn" data-qty-step="-1" data-order-id="${itemKey}" style="width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer;">−</button>
-            <span style="display:inline-block; min-width: 32px; text-align:center;">${qty}</span>
-            <button type="button" class="cart-order-card__qty-btn" data-qty-step="1" data-order-id="${itemKey}" style="width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer;">+</button>
-            ` : `<span>${qty}</span>`}
+            <span>${esc(String(qty))}</span>
           </span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Price per Cylinder:</span>
-          <span class="cart-order-card__value">${formatPKR(unitPrice)}</span>
+          <span class="cart-order-card__value">${unitPrice === null ? '—' : esc(formatPKR(unitPrice))}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Subtotal:</span>
-          <span class="cart-order-card__value ${discount > 0 ? 'is-struck' : ''}">${formatPKR(subtotal)}</span>
+          <span class="cart-order-card__value ${discount && discount > 0 ? 'is-struck' : ''}">${subtotal === null ? '—' : esc(formatPKR(subtotal))}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Customer Name:</span>
-          <span class="cart-order-card__value">${customerName}</span>
+          <span class="cart-order-card__value">${esc(customerName)}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Phone Number:</span>
-          <span class="cart-order-card__value">${phone}</span>
+          <span class="cart-order-card__value">${esc(phone)}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Delivery Address:</span>
-          <span class="cart-order-card__value">${address}</span>
+          <span class="cart-order-card__value">${esc(address)}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Coupon Used:</span>
-          <span class="cart-order-card__value">${couponCode || 'None'}</span>
+          <span class="cart-order-card__value">${esc(couponCode || 'None')}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Order Status:</span>
-          <span class="cart-order-card__value">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+          <span class="cart-order-card__value">${statusBadge}</span>
         </div>
         <div class="cart-order-card__row">
           <span class="cart-order-card__label">Created At:</span>
-          <span class="cart-order-card__value">${createdAt ? formatDate(createdAt) : '—'}</span>
+          <span class="cart-order-card__value">${createdAt ? esc(formatDate(createdAt)) : '—'}</span>
         </div>
-        ${discount > 0 ? `
+        ${discount && discount > 0 ? `
         <div class="cart-order-card__divider"></div>
         <div class="cart-order-card__row cart-order-card__row--discount">
           <span class="cart-order-card__label">Discount:</span>
-          <span class="cart-order-card__value">${formatPKR(discount)} ${couponCode ? `(${couponCode})` : ''}</span>
+          <span class="cart-order-card__value">${esc(formatPKR(discount))} ${couponCode ? `(${esc(couponCode)})` : ''}</span>
         </div>
         ` : ''}
         <div class="cart-order-card__divider"></div>
         <div class="cart-order-card__row cart-order-card__row--total">
           <span class="cart-order-card__label">Total:</span>
-          <span class="cart-order-card__value cart-order-card__value--total">${formatPKR(total)}</span>
+          <span class="cart-order-card__value cart-order-card__value--total">${total === null ? '—' : esc(formatPKR(total))}</span>
         </div>
       </div>
     `;
 
-    // Add delete button handler
+    // Add delete button handler (cart items only)
     const deleteBtn = card.querySelector('.cart-order-card__delete');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', (e) => {
@@ -144,41 +228,45 @@
         const key = deleteBtn.getAttribute('data-order-id');
         if (!key) return;
 
-        // Check if it's a placed order (starts with 'ORD-') or a cart item
-        if (key.startsWith('ORD-') && window.OrderStorage && typeof window.OrderStorage.deleteOrder === 'function') {
-          // Delete placed order
-          window.OrderStorage.deleteOrder(key);
-        } else if (window.CartManager && typeof window.CartManager.removeItem === 'function') {
-          // Delete cart item
+        if (window.CartManager && typeof window.CartManager.removeItem === 'function') {
           window.CartManager.removeItem(key);
         }
-        loadOrders();
+        void loadOrders();
       });
     }
-
-    // Qty button handlers
-    card.querySelectorAll('.cart-order-card__qty-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const step = parseInt(btn.getAttribute('data-qty-step') || '0', 10);
-        const key = btn.getAttribute('data-order-id');
-        if (!key || !step) return;
-        if (!window.CartManager || typeof window.CartManager.updateItem !== 'function') return;
-
-        const currentCart = window.CartManager.getCart();
-        const item = Array.isArray(currentCart.items) ? currentCart.items.find((it) => it.itemId === key) : null;
-        if (!item) return;
-
-        const nextQty = Math.max(1, (item.quantity || 1) + step);
-        window.CartManager.updateItem(key, { quantity: nextQty });
-        loadOrders();
-      });
-    });
 
     return card;
   };
 
-  const loadOrders = () => {
+  const fetchOrderById = async (orderId) => {
+    const id = safeText(orderId, '').trim();
+    if (!id) return null;
+
+    const apiUrl = (typeof window !== 'undefined' && window.getApiUrl)
+      ? `${window.getApiUrl('orders')}/${encodeURIComponent(id)}`
+      : `http://localhost:5000/api/orders/${encodeURIComponent(id)}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      let data = null;
+      try { data = await response.json(); } catch (_) {}
+
+      if (response.ok && data && data.success && data.data) {
+        return data.data;
+      }
+
+      // Graceful fallback (do not throw; render minimal card)
+      return { orderId: id, status: 'unknown' };
+    } catch (_) {
+      return { orderId: id, status: 'unknown' };
+    }
+  };
+
+  const loadOrders = async () => {
     // Get cart items from CartManager (localStorage: lpg_cart)
     const cart = (window.CartManager && typeof window.CartManager.getCart === 'function')
       ? window.CartManager.getCart()
@@ -186,13 +274,23 @@
 
     const cartItems = Array.isArray(cart.items) ? cart.items : [];
 
-    // Get placed orders from OrderStorage (localStorage: lpg_orders)
-    const placedOrders = (window.OrderStorage && typeof window.OrderStorage.getAllOrders === 'function')
-      ? window.OrderStorage.getAllOrders()
-      : [];
+    // Get locally saved order IDs (privacy-safe: IDs only) then fetch LIVE order details from backend
+    const placedOrderIds = (window.OrderStorage && typeof window.OrderStorage.getAllOrderIds === 'function')
+      ? window.OrderStorage.getAllOrderIds()
+      : (window.OrderStorage && typeof window.OrderStorage.getAllOrders === 'function')
+        ? window.OrderStorage.getAllOrders()
+        : [];
 
+    const settled = await Promise.allSettled(placedOrderIds.map(fetchOrderById));
+    const markedPlacedOrders = settled
+      .map((r) => (r && r.status === 'fulfilled' ? r.value : null))
+      .filter(Boolean)
+      .map((o) => ({ ...o, _isPlacedOrder: true }));
+
+    const markedCartItems = cartItems.map(item => ({ ...item, _isPlacedOrder: false }));
+    
     // Combine both: show placed orders first, then cart items
-    const allOrders = [...placedOrders, ...cartItems];
+    const allOrders = [...markedPlacedOrders, ...markedCartItems];
 
     // Update cart indicator (only for cart items, not placed orders)
     if (typeof window.setCartIndicator === 'function') {
@@ -230,7 +328,18 @@
     cartPage.classList.remove('is-hidden');
     document.body.classList.add('cart-page-open');
     window.location.hash = '#cart';
-    loadOrders();
+    void loadOrders();
+
+    // Live refresh while open (reflect admin status updates)
+    if (refreshIntervalId) {
+      window.clearInterval(refreshIntervalId);
+      refreshIntervalId = null;
+    }
+    refreshIntervalId = window.setInterval(() => {
+      if (cartPage && !cartPage.classList.contains('is-hidden')) {
+        void loadOrders();
+      }
+    }, 15000);
   };
 
   const closeCartPage = () => {
@@ -239,6 +348,11 @@
     document.body.classList.remove('cart-page-open');
     if (window.location.hash === '#cart') {
       window.location.hash = '#products';
+    }
+
+    if (refreshIntervalId) {
+      window.clearInterval(refreshIntervalId);
+      refreshIntervalId = null;
     }
   };
 

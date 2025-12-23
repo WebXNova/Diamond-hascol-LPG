@@ -167,13 +167,8 @@ function renderCoupons() {
   if (currentCoupons.length === 0) {
     tableBody.innerHTML = `
       <tr>
-<<<<<<< HEAD
         <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-500);">
-          No coupons found. Create your first coupon!
-=======
-        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
           No coupons found. Create your first coupon to get started.
->>>>>>> 7f425a9 (backend completed)
         </td>
       </tr>
     `;
@@ -181,16 +176,16 @@ function renderCoupons() {
   }
 
   tableBody.innerHTML = currentCoupons.map(coupon => {
-    const usagePercent = coupon.usageLimit > 0 ? (coupon.usageCount / coupon.usageLimit) * 100 : 0;
     const expired = isExpired(coupon.expiresAt);
-<<<<<<< HEAD
-    const usagePercent = (coupon.usageCount / coupon.usageLimit) * 100;
-
+    const usagePercent = coupon.usageLimit > 0 ? (coupon.usageCount / coupon.usageLimit) * 100 : 0;
     const typeLabel = coupon.type === 'percentage' ? 'Percentage' : 'Fixed Amount';
-    const minPurchaseLabel = coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString()}` : 'None';
-    const maxDiscountLabel = coupon.maxDiscount > 0 ? `₨${coupon.maxDiscount.toLocaleString()}` : 'Unlimited';
+    const minPurchaseLabel = coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString('en-PK')}` : 'None';
+    const maxDiscountLabel =
+      coupon.type === 'percentage' && coupon.maxDiscount > 0
+        ? `₨${coupon.maxDiscount.toLocaleString('en-PK')}`
+        : 'N/A';
     const statusLabel = expired ? 'Expired' : coupon.isActive ? 'Active' : 'Inactive';
-    const statusClass = expired ? 'admin-badge--cancelled' : coupon.isActive ? 'admin-badge--delivered' : 'admin-badge--pending';
+    const statusClass = expired ? 'admin-badge--cancelled' : coupon.isActive ? 'admin-badge--confirmed' : 'admin-badge--pending';
     const expiresLabel = formatDate(coupon.expiresAt);
 
     const usageMarkup = `
@@ -212,29 +207,16 @@ function renderCoupons() {
         </button>
       </div>
     `;
-
-=======
-    
->>>>>>> 7f425a9 (backend completed)
     return `
       <tr class="admin-table__main-row" data-coupon-id="${coupon.id}">
         <td><strong>${coupon.code}</strong></td>
         <td>${formatCouponValue(coupon)}</td>
-<<<<<<< HEAD
         <td>${typeLabel}</td>
         <td>${minPurchaseLabel}</td>
         <td>${maxDiscountLabel}</td>
         <td>
           <span class="admin-badge ${statusClass}">
             ${statusLabel}
-=======
-        <td>${coupon.type === 'percentage' ? 'Percentage' : 'Fixed'}</td>
-        <td>${coupon.minPurchase > 0 ? `₨${coupon.minPurchase.toLocaleString('en-PK')}` : 'None'}</td>
-        <td>${coupon.maxDiscount > 0 ? `₨${coupon.maxDiscount.toLocaleString('en-PK')}` : 'N/A'}</td>
-        <td>
-          <span class="admin-badge ${coupon.isActive && !expired ? 'admin-badge--confirmed' : 'admin-badge--cancelled'}">
-            ${coupon.isActive && !expired ? 'Active' : expired ? 'Expired' : 'Inactive'}
->>>>>>> 7f425a9 (backend completed)
           </span>
         </td>
         <td>${usageMarkup}</td>
@@ -245,7 +227,6 @@ function renderCoupons() {
             More
           </button>
         </td>
-<<<<<<< HEAD
       </tr>
       <tr class="admin-table__details-row" data-coupon-id="${coupon.id}" aria-hidden="true">
         <td colspan="10">
@@ -274,17 +255,6 @@ function renderCoupons() {
               <span class="admin-table__details-label">Actions</span>
               <span class="admin-table__details-value">${actionsMarkup}</span>
             </div>
-=======
-        <td>${formatDate(coupon.expiresAt)}</td>
-        <td>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="admin-btn admin-btn--secondary" onclick="editCoupon('${coupon.code}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-              Edit
-            </button>
-            <button class="admin-btn admin-btn--danger" onclick="deleteCoupon('${coupon.code}')" style="padding: 0.5rem 1rem; font-size: var(--fs-0);">
-              Delete
-            </button>
->>>>>>> 7f425a9 (backend completed)
           </div>
         </td>
       </tr>
@@ -650,7 +620,7 @@ export async function initCoupons() {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-500);">
+        <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-500);">
           Loading coupons...
         </td>
       </tr>

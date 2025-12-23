@@ -13,6 +13,24 @@ let currentFilters = {
 };
 
 /**
+ * Safe fallback formatter for Excel cells
+ */
+function safeCell(value, fallback = '—') {
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  return s.length ? s : fallback;
+}
+
+function normalizeStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function parseValidDate(dateValue) {
+  const d = new Date(dateValue);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Get auth token safely
  */
 function getAuthToken() {
@@ -128,9 +146,12 @@ async function fetchHistory() {
         id: order.id,
         customerName: order.customerName || 'N/A',
         phone: order.phone || 'N/A',
-        cylinderType: order.cylinderType?.toLowerCase() || 'domestic',
+        cylinderType: order.cylinderType || '',
+        cylinderTypeKey: order.cylinderType ? String(order.cylinderType).toLowerCase() : 'domestic',
         quantity: order.quantity || 0,
-        total: order.total || order.totalPrice || 0,
+        pricePerCylinder: order.pricePerCylinder ?? 0,
+        subtotal: order.subtotal ?? 0,
+        total: order.total ?? order.totalPrice ?? 0,
         status: order.status || 'pending',
         createdAt: order.createdAt || new Date().toISOString(),
         address: order.address || '',
@@ -200,7 +221,7 @@ function calculateStats(filtered) {
   // Type breakdown
   const typeBreakdown = {};
   filtered.forEach(order => {
-    const type = order.cylinderType || 'domestic';
+    const type = order.cylinderTypeKey || 'domestic';
     typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
   });
 
@@ -311,7 +332,7 @@ function renderHistory() {
     const customerName = order.customerName || 'N/A';
     const phone = order.phone || 'N/A';
     const cylinderType = order.cylinderType
-      ? order.cylinderType.charAt(0).toUpperCase() + order.cylinderType.slice(1)
+      ? String(order.cylinderType).charAt(0).toUpperCase() + String(order.cylinderType).slice(1)
       : 'N/A';
     const quantity = order.quantity ?? 'N/A';
     const total = order.total ?? 0;
@@ -373,6 +394,194 @@ function renderHistory() {
 }
 
 /**
+ * Fetch history for export (ignores current UI filters and fetches full history set)
+ */
+async function fetchHistoryForExport() {
+  // Use the history endpoint that returns only delivered and cancelled orders
+  const apiUrl = window.getApiUrl ? window.getApiUrl('adminOrders') + '/history' : 'http://localhost:5000/api/admin/orders/history';
+
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Authentication required. Please login again.');
+  }
+
+  const params = new URLSearchParams();
+  params.append('limit', '10000');
+
+  const response = await fetch(`${apiUrl}?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('admin_auth_session');
+    window.location.replace('/admin/login.html');
+    throw new Error('Session expired. Please login again.');
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch orders: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (!data.success || !Array.isArray(data.data)) {
+    throw new Error('Invalid response format from server');
+  }
+
+  // Keep the same shape as currentHistory (but include pricing fields)
+  return data.data.map(order => ({
+    id: order.id,
+    customerName: order.customerName || '',
+    phone: order.phone || '',
+    address: order.address || '',
+    cylinderType: order.cylinderType || '',
+    quantity: order.quantity ?? 0,
+    pricePerCylinder: order.pricePerCylinder ?? 0,
+    subtotal: order.subtotal ?? 0,
+    total: order.total ?? order.totalPrice ?? 0,
+    coupon: order.couponCode || null,
+    status: order.status || '',
+    createdAt: order.createdAt || '',
+  }));
+}
+
+/**
+ * Fetch orders from the existing backend API.
+ * Tries public `/api/orders` first (if available in this deployment),
+ * and falls back to the authenticated admin history endpoint.
+ */
+async function fetchOrdersForExport() {
+  // Try public orders endpoint (some deployments expose GET /api/orders)
+  try {
+    const url = window.getApiUrl ? window.getApiUrl('orders') : '/api/orders';
+    const res = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+
+    if (res.ok) {
+      const json = await res.json();
+      const list = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : null);
+
+      if (Array.isArray(list)) {
+        return list.map(order => ({
+          id: order.id ?? order._id ?? order.orderId ?? '',
+          customerName: order.customerName ?? order.name ?? '',
+          phone: order.phone ?? '',
+          address: order.address ?? order.deliveryAddress ?? '',
+          cylinderType: order.cylinderType ?? '',
+          productName: order.productName ?? order.product ?? '',
+          quantity: order.quantity ?? 0,
+          // Prefer server-calculated fields if present; fall back to raw fields from other implementations
+          pricePerCylinder: order.pricePerCylinder ?? order.price ?? 0,
+          subtotal: order.subtotal ?? 0,
+          total: order.total ?? order.totalPrice ?? 0,
+          coupon: order.couponCode ?? order.coupon ?? null,
+          status: order.status ?? '',
+          createdAt: order.createdAt ?? '',
+        }));
+      }
+    }
+  } catch (e) {
+    // Ignore and fall back to authenticated history endpoint
+  }
+
+  return fetchHistoryForExport();
+}
+
+/**
+ * Export Delivered orders from last 60 days to Excel
+ * Uses server-provided prices/totals (no client-side price math).
+ */
+async function exportDeliveredOrdersExcel() {
+  try {
+    const exportBtn =
+      document.getElementById('exportBtn') ||
+      document.getElementById('history-export-btn');
+
+    if (!window.XLSX) {
+      showNotification('Excel export library failed to load. Please refresh the page.', 'error');
+      return;
+    }
+
+    if (exportBtn) {
+      exportBtn.disabled = true;
+      exportBtn.style.opacity = '0.6';
+      exportBtn.style.cursor = 'not-allowed';
+    }
+
+    const orders = await fetchOrdersForExport();
+
+    const now = new Date();
+    const past60 = new Date(now);
+    past60.setDate(now.getDate() - 60);
+
+    const deliveredOrders = orders.filter(order => {
+      const status = normalizeStatus(order.status);
+      if (status === 'cancelled' || status === 'canceled') return false;
+      if (status !== 'delivered') return false;
+
+      const createdAt = parseValidDate(order.createdAt);
+      if (!createdAt) return false;
+      return createdAt >= past60 && createdAt <= now;
+    });
+
+    if (deliveredOrders.length === 0) {
+      showNotification('No delivered orders found in the last 60 days.', 'info');
+      return;
+    }
+
+    const sheetData = deliveredOrders.map(order => ({
+      'Order ID': safeCell(order.id, '—'),
+      'Product / Cylinder Name': safeCell(order.productName, 'LPG Cylinder'),
+      'Cylinder Type': safeCell(order.cylinderType, '—'),
+      'Quantity': order.quantity ?? '—',
+      'Price per Cylinder (PKR)': order.pricePerCylinder ?? '—',
+      'Subtotal (PKR)': order.subtotal ?? '—',
+      'Customer Name': safeCell(order.customerName, '—'),
+      'Phone Number': safeCell(order.phone, '—'),
+      'Delivery Address': safeCell(order.address, '—'),
+      'Coupon Used': safeCell(order.coupon, 'None'),
+      'Order Status': 'Delivered',
+      'Created At (Date/Time)': safeCell(order.createdAt, '—'),
+      'Total Price (PKR)': order.total ?? '—',
+    }));
+
+    const ws = window.XLSX.utils.json_to_sheet(sheetData);
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Delivered Orders');
+
+    window.XLSX.writeFile(wb, 'Delivered_Orders_Last_60_Days.xlsx');
+    showNotification('Excel exported successfully.', 'success');
+  } catch (err) {
+    console.error('Excel export failed', err);
+    showNotification('Excel export failed. Please try again.', 'error');
+  } finally {
+    const exportBtn =
+      document.getElementById('exportBtn') ||
+      document.getElementById('history-export-btn');
+    if (exportBtn) {
+      exportBtn.disabled = false;
+      exportBtn.style.opacity = '';
+      exportBtn.style.cursor = '';
+    }
+  }
+}
+
+function setupExportButton() {
+  const exportBtn =
+    document.getElementById('exportBtn') ||
+    document.getElementById('history-export-btn');
+
+  if (!exportBtn) return;
+
+  exportBtn.disabled = false;
+  exportBtn.style.opacity = '';
+  exportBtn.style.cursor = '';
+  exportBtn.onclick = exportDeliveredOrdersExcel;
+}
+
+/**
  * Initialize history page
  */
 export async function initHistory() {
@@ -404,6 +613,9 @@ export async function initHistory() {
       `;
     }
   }
+
+  // Enable export button + handler (does not affect table functionality)
+  setupExportButton();
 
   // Date from filter
   const dateFromInput = document.getElementById('history-date-from');

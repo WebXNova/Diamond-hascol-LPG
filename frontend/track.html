@@ -226,19 +226,60 @@
                 errorMessage.classList.remove('show');
             }
 
+            function esc(value) {
+                // Decode numeric HTML entities first (e.g. "&#x2F;" -> "/") then escape for XSS safety.
+                const decoded = String(value)
+                    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+                        const cp = parseInt(hex, 16);
+                        return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+                    })
+                    .replace(/&#(\d+);/g, (_, dec) => {
+                        const cp = parseInt(dec, 10);
+                        return Number.isFinite(cp) && cp >= 0 ? String.fromCodePoint(cp) : _;
+                    });
+
+                if (typeof window !== 'undefined' && window.SafeRender && typeof window.SafeRender.escapeHtml === 'function') {
+                    return window.SafeRender.escapeHtml(decoded);
+                }
+                return decoded
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function safeText(value, fallback = '—') {
+                if (value === null || value === undefined) return fallback;
+                const s = String(value).trim();
+                return s ? s : fallback;
+            }
+
+            function toNumberOrNull(value) {
+                const n = Number(value);
+                return Number.isFinite(n) ? n : null;
+            }
+
             function formatCurrency(amount) {
-                return `₨${parseFloat(amount).toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
+                const n = toNumberOrNull(amount);
+                if (n === null) return '—';
+                return `₨${n.toLocaleString('en-PK', { maximumFractionDigits: 0 })}`;
             }
 
             function formatDate(dateString) {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                try {
+                    const date = new Date(dateString);
+                    if (Number.isNaN(date.getTime())) return '—';
+                    return date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                } catch (_) {
+                    return '—';
+                }
             }
 
             function getStatusBadgeClass(status) {
@@ -251,19 +292,23 @@
                 return statusMap[status?.toLowerCase()] || 'pending';
             }
 
+            function getProductName(order) {
+                const ct = safeText(order && order.cylinderType, '').toLowerCase();
+                if (ct === 'commercial') return 'Commercial LPG Cylinder';
+                if (ct === 'domestic') return 'Domestic LPG Cylinder';
+                return 'LPG Cylinder';
+            }
+
             function renderOrderDetails(order) {
-                const statusClass = getStatusBadgeClass(order.status);
-                const discountRow = order.discount > 0 ? `
+                const statusText = safeText(order && order.status, 'pending');
+                const statusClass = getStatusBadgeClass(statusText);
+                const couponUsed = safeText(order && order.couponCode, 'None');
+                const hasDiscount = toNumberOrNull(order && order.discount) !== null && Number(order.discount) > 0;
+                const discountRow = hasDiscount ? `
                     <div class="detail-row">
                         <span class="detail-label">Discount:</span>
-                        <span class="detail-value" style="color: #065f46;">-${formatCurrency(order.discount)}</span>
+                        <span class="detail-value" style="color: #065f46;">-${esc(formatCurrency(order.discount))}</span>
                     </div>
-                    ${order.couponCode ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Coupon Code:</span>
-                        <span class="detail-value">${order.couponCode}</span>
-                    </div>
-                    ` : ''}
                 ` : '';
 
                 orderDetails.innerHTML = `
@@ -271,17 +316,17 @@
                         <h2>Order Information</h2>
                         <div class="detail-row">
                             <span class="detail-label">Order ID:</span>
-                            <span class="detail-value">#${order.orderId}</span>
+                            <span class="detail-value">#${esc(safeText(order && order.orderId))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Status:</span>
                             <span class="detail-value">
-                                <span class="status-badge ${statusClass}">${order.status}</span>
+                                <span class="status-badge ${esc(statusClass)}">${esc(statusText)}</span>
                             </span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Order Date:</span>
-                            <span class="detail-value">${formatDate(order.createdAt)}</span>
+                            <span class="detail-value">${esc(formatDate(order && order.createdAt))}</span>
                         </div>
                     </div>
 
@@ -289,40 +334,48 @@
                         <h2>Customer Information</h2>
                         <div class="detail-row">
                             <span class="detail-label">Name:</span>
-                            <span class="detail-value">${order.customerName}</span>
+                            <span class="detail-value">${esc(safeText(order && order.customerName))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Phone:</span>
-                            <span class="detail-value">${order.phone}</span>
+                            <span class="detail-value">${esc(safeText(order && order.phone))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Delivery Address:</span>
-                            <span class="detail-value" style="text-align: right; max-width: 60%;">${order.address}</span>
+                            <span class="detail-value" style="text-align: right; max-width: 60%;">${esc(safeText(order && order.address))}</span>
                         </div>
                     </div>
 
                     <div class="order-section">
                         <h2>Order Summary</h2>
                         <div class="detail-row">
+                            <span class="detail-label">Product / Cylinder Name:</span>
+                            <span class="detail-value">${esc(getProductName(order))}</span>
+                        </div>
+                        <div class="detail-row">
                             <span class="detail-label">Cylinder Type:</span>
-                            <span class="detail-value">${order.cylinderType}</span>
+                            <span class="detail-value">${esc(safeText(order && order.cylinderType))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Quantity:</span>
-                            <span class="detail-value">${order.quantity}</span>
+                            <span class="detail-value">${esc(safeText(order && order.quantity))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Price per Cylinder:</span>
-                            <span class="detail-value">${formatCurrency(order.pricePerCylinder)}</span>
+                            <span class="detail-value">${esc(formatCurrency(order && order.pricePerCylinder))}</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Subtotal:</span>
-                            <span class="detail-value">${formatCurrency(order.subtotal)}</span>
+                            <span class="detail-value">${esc(formatCurrency(order && order.subtotal))}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Coupon Used:</span>
+                            <span class="detail-value">${esc(couponUsed)}</span>
                         </div>
                         ${discountRow}
                         <div class="detail-row" style="padding-top: 1rem; border-top: 2px solid var(--border, #e0e0e0); margin-top: 0.5rem;">
                             <span class="detail-label" style="font-size: 1.125rem; font-weight: 700;">Total:</span>
-                            <span class="detail-value" style="font-size: 1.25rem; color: var(--color-brand, #FF6B35);">${formatCurrency(order.totalPrice)}</span>
+                            <span class="detail-value" style="font-size: 1.25rem; color: var(--color-brand, #FF6B35);">${esc(formatCurrency(order && order.totalPrice))}</span>
                         </div>
                     </div>
                 `;
@@ -331,18 +384,15 @@
                 hideError();
             }
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const orderId = orderIdInput.value.trim();
-                
-                if (!orderId) {
+            async function trackOrderById(orderId) {
+                const id = safeText(orderId, '').trim();
+                if (!id) {
                     showError('Please enter an order ID');
                     return;
                 }
 
-                // Validate order ID is numeric
-                if (isNaN(parseInt(orderId))) {
+                // Backend requires numeric order IDs
+                if (isNaN(parseInt(id, 10))) {
                     showError('Order ID must be a number');
                     return;
                 }
@@ -354,10 +404,9 @@
                 orderDetails.classList.remove('show');
 
                 try {
-                    // Use centralized API config if available
                     const apiUrl = (typeof window !== 'undefined' && window.getApiUrl) 
-                        ? window.getApiUrl('orders') + '/' + orderId
-                        : `http://localhost:5000/api/orders/${orderId}`;
+                        ? window.getApiUrl('orders') + '/' + encodeURIComponent(id)
+                        : `http://localhost:5000/api/orders/${encodeURIComponent(id)}`;
                     
                     const response = await fetch(apiUrl, {
                         method: 'GET',
@@ -366,12 +415,20 @@
                         },
                     });
 
-                    const data = await response.json();
+                    let data = null;
+                    try { data = await response.json(); } catch (_) {}
 
-                    if (response.ok && data.success && data.data) {
+                    if (response.ok && data && data.success && data.data) {
+                        // Privacy: store ONLY orderId locally (no order details/PII)
+                        try {
+                            if (window.OrderStorage && typeof window.OrderStorage.addOrderId === 'function') {
+                                window.OrderStorage.addOrderId(String(id));
+                            }
+                        } catch (_) {}
+
                         renderOrderDetails(data.data);
                     } else {
-                        showError(data.error || 'Order not found. Please check your order ID and try again.');
+                        showError((data && data.error) || 'Order not found. Please check your order ID and try again.');
                     }
                 } catch (error) {
                     console.error('Error tracking order:', error);
@@ -380,6 +437,11 @@
                     trackBtn.disabled = false;
                     trackBtn.textContent = 'Track Order';
                 }
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await trackOrderById(orderIdInput.value.trim());
             });
 
             // Allow Enter key to submit
@@ -388,6 +450,17 @@
                     form.dispatchEvent(new Event('submit'));
                 }
             });
+
+            // Auto-load last tracked orderId (ID only) if available
+            try {
+                const lastId = (window.OrderStorage && typeof window.OrderStorage.getLastOrderId === 'function')
+                    ? window.OrderStorage.getLastOrderId()
+                    : null;
+                if (lastId) {
+                    orderIdInput.value = String(lastId);
+                    trackOrderById(String(lastId));
+                }
+            } catch (_) {}
         })();
     </script>
 </body>

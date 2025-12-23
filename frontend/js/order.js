@@ -501,9 +501,11 @@ document.addEventListener('DOMContentLoaded', () => {
           orderStatusBadgeEl.textContent = 'Cart';
           orderStatusBadgeEl.classList.remove(
             'order-sidecard__badge--confirmed',
+            'order-sidecard__badge--pending',
             'order-sidecard__badge--preparing',
             'order-sidecard__badge--out_for_delivery',
-            'order-sidecard__badge--delivered'
+            'order-sidecard__badge--delivered',
+            'order-sidecard__badge--cancelled'
           );
         }
 
@@ -712,23 +714,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const setStatus = (status) => {
     if (!hasSidecardUI) return;
+    const normalized = String(status || '').trim().toLowerCase();
     const labelMap = {
+      pending: 'Pending',
       confirmed: 'Confirmed',
       preparing: 'Preparing',
       out_for_delivery: 'Out for delivery',
       delivered: 'Delivered',
+      cancelled: 'Cancelled',
     };
 
-    orderStatusBadgeEl.textContent = labelMap[status] || 'Confirmed';
+    orderStatusBadgeEl.textContent = labelMap[normalized] || 'Confirmed';
     orderStatusBadgeEl.classList.remove(
       'order-sidecard__badge--confirmed',
+      'order-sidecard__badge--pending',
       'order-sidecard__badge--preparing',
       'order-sidecard__badge--out_for_delivery',
       'order-sidecard__badge--delivered',
+      'order-sidecard__badge--cancelled',
     );
-    if (status === 'preparing') orderStatusBadgeEl.classList.add('order-sidecard__badge--preparing');
-    else if (status === 'out_for_delivery') orderStatusBadgeEl.classList.add('order-sidecard__badge--out_for_delivery');
-    else if (status === 'delivered') orderStatusBadgeEl.classList.add('order-sidecard__badge--delivered');
+    if (normalized === 'pending') orderStatusBadgeEl.classList.add('order-sidecard__badge--pending');
+    else if (normalized === 'preparing') orderStatusBadgeEl.classList.add('order-sidecard__badge--preparing');
+    else if (normalized === 'out_for_delivery') orderStatusBadgeEl.classList.add('order-sidecard__badge--out_for_delivery');
+    else if (normalized === 'delivered') orderStatusBadgeEl.classList.add('order-sidecard__badge--delivered');
+    else if (normalized === 'cancelled') orderStatusBadgeEl.classList.add('order-sidecard__badge--cancelled');
     else orderStatusBadgeEl.classList.add('order-sidecard__badge--confirmed');
   };
 
@@ -1101,6 +1110,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       submitState.status = 'success';
       submitState.lastOrder = res;
+
+      // Privacy: store ONLY orderId locally (no order details/PII)
+      try {
+        if (window.OrderStorage && typeof window.OrderStorage.addOrderId === 'function' && res && res.orderId) {
+          window.OrderStorage.addOrderId(String(res.orderId));
+        }
+      } catch (_) {}
+
       // Store order data from backend response (no snapshot needed)
       // Calculate discount percentage safely
       const discountPct = (res.subtotal > 0 && res.discount > 0) 

@@ -7,7 +7,7 @@ export type CouponKind = 'percent' | 'flat';
 export type CouponResult =
   | {
       ok: true;
-      code: 'WELCOME10' | 'FLAT500';
+      code: string;
       kind: CouponKind;
       discountAmount: number;
       discountPercent?: number;

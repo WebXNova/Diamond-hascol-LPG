@@ -236,6 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await submitOrder(payload);
       console.log('✅ Order submitted successfully:', result);
       
+      // Privacy: store ONLY orderId locally (no order details/PII)
+      try {
+        if (window.OrderStorage && typeof window.OrderStorage.addOrderId === 'function' && result && result.orderId) {
+          window.OrderStorage.addOrderId(String(result.orderId));
+        }
+      } catch (_) {}
+
       // Show success message
       alert(`Order confirmed! Order ID: ${result.orderId}`);
       

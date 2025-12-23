@@ -798,6 +798,14 @@
           return;
         }
 
+        // Privacy: store ONLY orderId locally (no order details/PII)
+        try {
+          const oid = result && result.data && result.data.orderId ? String(result.data.orderId) : null;
+          if (oid && window.OrderStorage && typeof window.OrderStorage.addOrderId === 'function') {
+            window.OrderStorage.addOrderId(oid);
+          }
+        } catch (_) {}
+
         // Add to cart using CartManager (keep existing UI behavior)
         if (window.CartManager) {
           try {
@@ -885,6 +893,7 @@
   });
 
   // Use event delegation for dynamically loaded buy buttons
+  // Run in capture phase so button-level stopPropagation() does not block this handler.
   document.addEventListener('click', async (e) => {
     const buyBtn = e.target.closest('.product-buy-now-btn');
     if (buyBtn && !buyBtn.disabled) {
@@ -901,7 +910,7 @@
         navigateToOrderPage(productId);
       }
     }
-  });
+  }, true);
 
   // Prevent product card click when clicking buttons
   const productCards = document.querySelectorAll('.product-card');
