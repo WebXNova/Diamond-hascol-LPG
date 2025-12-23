@@ -7,8 +7,8 @@
 
 **Issue:** Spaces around `=` signs cause dotenv to load variables incorrectly:
 ```
-CLOUDINARY_CLOUD_NAME = your_cloud_name          ❌ Space after =
-CLOUDINARY_API_KEY =your_api_key       ❌ Space after =
+CLOUDINARY_CLOUD_NAME = duxiuthsj          ❌ Space after =
+CLOUDINARY_API_KEY =571259345963511       ❌ Space after =
 CLOUDINARY_API_SECRET = CLOUDINARY_URL=... ❌ Space after = AND malformed value
 ```
 
@@ -120,16 +120,16 @@ if (!trimmedCloudName || !trimmedApiKey || !trimmedApiSecret) {
 
 **FROM (BROKEN):**
 ```
-CLOUDINARY_CLOUD_NAME = your_cloud_name
-CLOUDINARY_API_KEY =your_api_key
-CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://api_key:**********@cloud_name
+CLOUDINARY_CLOUD_NAME = duxiuthsj
+CLOUDINARY_API_KEY =571259345963511 
+CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://571259345963511:**********@duxiuthsj
 ```
 
 **TO (FIXED):**
 ```
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+CLOUDINARY_CLOUD_NAME=duxiuthsj
+CLOUDINARY_API_KEY=571259345963511
+CLOUDINARY_API_SECRET=pc1wBqI9UuFNjMFf5StgLulUaF4
 ```
 
 **Critical Rules:**
@@ -150,8 +150,8 @@ npm start
 **Success:**
 ```
 ✅ Cloudinary configured successfully
-   Cloud Name: your_cloud_name
-   API Key: xxxxx...
+   Cloud Name: duxiuthsj
+   API Key: 57125...
 ```
 
 **Failure:**
@@ -200,7 +200,7 @@ npm start
 
 ## Security Note
 
-⚠️ **IMPORTANT: Any Cloudinary API secrets exposed in this file should be rotated immediately.**
+⚠️ **The Cloudinary API secret `pc1wBqI9UuFNjMFf5StgLulUaF4` is exposed in this conversation.**
 
 **Recommended Actions:**
 1. Rotate the secret in Cloudinary dashboard

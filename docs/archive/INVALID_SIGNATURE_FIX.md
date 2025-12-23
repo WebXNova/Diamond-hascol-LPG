@@ -7,7 +7,7 @@ The error `Invalid Signature 799d9caa21ce4ec061dcde3e45332888b2c20319` occurs be
 **Your `.env` file has a MALFORMED `CLOUDINARY_API_SECRET` value:**
 
 ```
-CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://api_key:**********@cloud_name
+CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://571259345963511:**********@duxiuthsj
 ```
 
 **Problems:**
@@ -35,7 +35,7 @@ You have two options:
 **Option B: Extract from CLOUDINARY_URL**
 If you have a `CLOUDINARY_URL` like:
 ```
-cloudinary://api_key:YOUR_SECRET_HERE@cloud_name
+cloudinary://571259345963511:YOUR_SECRET_HERE@duxiuthsj
 ```
 The secret is the part between `:` and `@` (YOUR_SECRET_HERE)
 
@@ -45,15 +45,15 @@ The secret is the part between `:` and `@` (YOUR_SECRET_HERE)
 
 **FROM (BROKEN):**
 ```
-CLOUDINARY_CLOUD_NAME = your_cloud_name
-CLOUDINARY_API_KEY =your_api_key
-CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://api_key:**********@cloud_name
+CLOUDINARY_CLOUD_NAME = duxiuthsj
+CLOUDINARY_API_KEY =571259345963511 
+CLOUDINARY_API_SECRET = CLOUDINARY_URL=cloudinary://571259345963511:**********@duxiuthsj
 ```
 
 **TO (FIXED):**
 ```
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_CLOUD_NAME=duxiuthsj
+CLOUDINARY_API_KEY=571259345963511
 CLOUDINARY_API_SECRET=your_actual_secret_here
 ```
 
@@ -93,8 +93,8 @@ npm start
 **Check logs for:**
 ```
 ✅ Cloudinary configured successfully
-   Cloud Name: your_cloud_name
-   API Key: xxxxx...
+   Cloud Name: duxiuthsj
+   API Key: 57125...
 ```
 
 ### Step 5: Test Image Upload
