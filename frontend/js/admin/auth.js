@@ -76,6 +76,25 @@ export function logout() {
 }
 
 /**
+ * Get access key from URL
+ */
+function getAccessKey() {
+  if (typeof window === 'undefined' || !window.location) return '';
+  const params = new URLSearchParams(window.location.search);
+  return params.get('key') || params.get('access') || '';
+}
+
+/**
+ * Preserve access key in URL
+ */
+function withAccessKey(path) {
+  const key = getAccessKey();
+  if (!key) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}key=${encodeURIComponent(key)}`;
+}
+
+/**
  * Real login function - calls backend API
  * 
  * @param {string} email - Admin email

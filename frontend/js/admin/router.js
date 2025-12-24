@@ -10,6 +10,25 @@ const ADMIN_BASE_PATH = '/admin';
 const LOGIN_PATH = `${ADMIN_BASE_PATH}/login.html`;
 
 /**
+ * Get access key from current URL
+ */
+function getAccessKey() {
+  if (typeof window === 'undefined' || !window.location) return '';
+  const params = new URLSearchParams(window.location.search);
+  return params.get('key') || params.get('access') || '';
+}
+
+/**
+ * Preserve access key in URL
+ */
+function withAccessKey(path) {
+  const key = getAccessKey();
+  if (!key) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}key=${encodeURIComponent(key)}`;
+}
+
+/**
  * Protected routes that require authentication
  */
 const PROTECTED_ROUTES = [
@@ -77,9 +96,9 @@ function showContent() {
 export async function initRouter() {
   // Skip protection on login page
   if (isLoginPage()) {
-    // If already authenticated, redirect to dashboard
+    // If already authenticated, redirect to dashboard (preserve access key)
     if (isAuthenticated()) {
-      strictRedirect(`${ADMIN_BASE_PATH}/dashboard.html`);
+      strictRedirect(withAccessKey(`${ADMIN_BASE_PATH}/dashboard.html`));
       return false;
     }
     return true;
@@ -92,8 +111,8 @@ export async function initRouter() {
     
     // First check: Does session exist?
     if (!isAuthenticated()) {
-      // No session - immediate redirect (no delay)
-      strictRedirect(LOGIN_PATH);
+      // No session - immediate redirect (preserve access key)
+      strictRedirect(withAccessKey(LOGIN_PATH));
       return false;
     }
 
@@ -101,16 +120,16 @@ export async function initRouter() {
     try {
       const verification = await verifyToken();
       if (!verification.success) {
-        // Token invalid - redirect immediately
-        strictRedirect(LOGIN_PATH);
+        // Token invalid - redirect immediately (preserve access key)
+        strictRedirect(withAccessKey(LOGIN_PATH));
         return false;
       }
       // Token valid - show content
       showContent();
       return true;
     } catch (error) {
-      // Network error or verification failed - require re-auth
-      strictRedirect(LOGIN_PATH);
+      // Network error or verification failed - require re-auth (preserve access key)
+      strictRedirect(withAccessKey(LOGIN_PATH));
       return false;
     }
   }
@@ -120,26 +139,26 @@ export async function initRouter() {
 }
 
 /**
- * Navigate to an admin page
+ * Navigate to an admin page (preserves access key)
  */
 export function navigateTo(page) {
   if (!isAuthenticated() && page !== 'login.html') {
-    strictRedirect(LOGIN_PATH);
+    strictRedirect(withAccessKey(LOGIN_PATH));
     return;
   }
 
-  window.location.href = `${ADMIN_BASE_PATH}/${page}`;
+  window.location.href = withAccessKey(`${ADMIN_BASE_PATH}/${page}`);
 }
 
 /**
- * Logout and redirect to login
+ * Logout and redirect to login (preserves access key)
  */
 export async function logout() {
   const { logout: logoutFn } = window.AdminAuth || {};
   if (logoutFn) {
     await logoutFn();
   }
-  strictRedirect(LOGIN_PATH);
+  strictRedirect(withAccessKey(LOGIN_PATH));
 }
 
 // Expose globally

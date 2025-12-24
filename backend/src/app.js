@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const path = require("path");
 
 // Compression is optional - use if available, otherwise skip
 let compression;
@@ -92,6 +93,48 @@ app.use(helmet({
   },
 }));
 
+// -------- Static assets + admin HTML (served by backend) --------
+const FRONTEND_DIR = path.join(__dirname, "..", "..", "frontend");
+const ADMIN_DIR = path.join(FRONTEND_DIR, "admin");
+const NOT_FOUND_HTML = path.join(FRONTEND_DIR, "404.html");
+
+// Serve required asset folders (keep these working without ?key=...)
+app.use("/css", express.static(path.join(FRONTEND_DIR, "css")));
+app.use("/js", express.static(path.join(FRONTEND_DIR, "js")));
+app.use("/public", express.static(path.join(FRONTEND_DIR, "public")));
+app.use("/data", express.static(path.join(FRONTEND_DIR, "data")));
+
+// Home page (used for redirects)
+app.get("/", (req, res) => {
+  return res.sendFile(path.join(FRONTEND_DIR, "index.html"));
+});
+
+// /admin -> /admin/login (redirect without middleware - frontend will validate)
+app.get(["/admin", "/admin/"], (req, res) => {
+  const key = req.query.key || req.query.access || '';
+  const redirectUrl = key ? `/admin/login?key=${encodeURIComponent(key)}` : '/admin/login';
+  return res.redirect(302, redirectUrl);
+});
+
+// Pretty admin routes -> serve legacy HTML files from frontend/admin/
+// Frontend validation handles access key checking (no backend middleware)
+const adminPages = {
+  login: "login.html",
+  dashboard: "dashboard.html",
+  orders: "orders.html",
+  messages: "messages.html",
+  coupons: "coupons.html",
+  products: "products.html",
+  history: "history.html",
+  settings: "settings.html",
+};
+
+for (const [route, file] of Object.entries(adminPages)) {
+  app.get([`/admin/${route}`, `/admin/${route}/`], (req, res) => {
+    return res.sendFile(path.join(ADMIN_DIR, file));
+  });
+}
+
 // Public routes
 app.use("/api/order", simpleOrderRoutes);
 app.use("/api/orders", orderRoutes);
@@ -115,10 +158,16 @@ app.get("/health", (req, res) => {
 
 // Global 404 handler for unknown routes (must be before error middleware)
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found'
-  });
+  // API endpoints keep JSON responses
+  if ((req.originalUrl || "").startsWith("/api/")) {
+    return res.status(404).json({
+      success: false,
+      error: "Route not found",
+    });
+  }
+
+  // Browser routes show a friendly HTML page
+  return res.status(404).sendFile(NOT_FOUND_HTML);
 });
 
 // Error handling middleware (must be last)
